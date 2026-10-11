@@ -1,29 +1,30 @@
 import MirageKit
 import SwiftUI
 
-/// Proportions of a device's case around its panel, in panel pixels.
+/// Proportions of a device's card around its panel, in panel pixels.
 struct ChromeGeometry {
     let profile: DeviceProfile
 
     var screen: CGSize { CGSize(width: profile.screen.width, height: profile.screen.height) }
 
-    /// Case size, without straps / lugs.
-    var body: CGSize {
-        switch profile.family {
-        case .watch:
-            let d = max(screen.width, screen.height) * 1.2
-            return CGSize(width: d, height: d)
-        case .band:
-            return CGSize(width: screen.width + screen.width * 0.2, height: screen.height + screen.width * 0.2)
-        }
+    /// Panel pixel padding for liquid glass card around the screen.
+    var cardPadding: CGFloat {
+        max(20, min(screen.width, screen.height) * 0.075)
     }
 
-    /// Everything drawn, including straps and buttons.
+    /// Card size in panel pixels.
+    var card: CGSize {
+        CGSize(width: screen.width + cardPadding * 2, height: screen.height + cardPadding * 2)
+    }
+
+    /// Extra width allocated for the independent button column (in panel pixels).
+    var buttonColumnWidth: CGFloat {
+        profile.buttons.isEmpty ? 0 : 130
+    }
+
+    /// Total bounding size in panel pixels for stage fit calculation.
     var total: CGSize {
-        switch profile.family {
-        case .watch: return CGSize(width: body.width * 1.12, height: body.height * 1.5)
-        case .band: return CGSize(width: body.width * 1.08, height: body.height * 1.34)
-        }
+        CGSize(width: card.width + buttonColumnWidth, height: card.height)
     }
 
     var screenCorner: CGFloat {
@@ -31,7 +32,8 @@ struct ChromeGeometry {
     }
 }
 
-/// The device drawn around its screen, with clickable hardware buttons.
+/// The device screen encased in a modern liquid glass card, with an independent
+/// vertical column of hardware buttons.
 struct DeviceChrome<Screen: View>: View {
     let profile: DeviceProfile
     /// Points per panel pixel.
@@ -40,144 +42,208 @@ struct DeviceChrome<Screen: View>: View {
     @ViewBuilder var screen: () -> Screen
 
     private var geo: ChromeGeometry { ChromeGeometry(profile: profile) }
-    private var accent: Color { Color(hex: profile.accent) ?? .gray }
+    private var accent: Color { Color(hex: profile.accent) ?? .blue }
 
     var body: some View {
         let g = geo
-        let body = CGSize(width: g.body.width * scale, height: g.body.height * scale)
         let screenSize = CGSize(width: g.screen.width * scale, height: g.screen.height * scale)
-        ZStack {
-            straps(body: body)
-            // buttons sit under the case so only their outer half shows
-            buttons(body: body)
-            caseShape(body: body)
+        let padding = max(14, g.cardPadding * scale)
+
+        HStack(alignment: .center, spacing: max(12, 18 * scale)) {
+            // Liquid glass card enclosing the screen with padding
+            glassScreenCard(screenSize: screenSize, padding: padding)
+
+            // Independent vertical column of buttons
+            if !profile.buttons.isEmpty {
+                HardwareButtonColumn(buttons: profile.buttons, accent: accent, scale: scale) { button, down in
+                    onButton?(button, down)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func glassScreenCard(screenSize: CGSize, padding: CGFloat) -> some View {
+        let cardRadius = cardCornerRadius(screenSize: screenSize, padding: padding)
+        let cardShape = RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
+
+        screenView(screenSize: screenSize)
+            .padding(padding)
+            .background {
+                ZStack {
+                    // Frosted glass material
+                    cardShape
+                        .fill(Color(white: 0.08).opacity(0.75))
+                    cardShape
+                        .fill(.ultraThinMaterial)
+                    // Specular liquid sheen
+                    cardShape
+                        .fill(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .white.opacity(0.10), location: 0.0),
+                                    .init(color: .white.opacity(0.02), location: 0.35),
+                                    .init(color: .clear, location: 0.65),
+                                    .init(color: .black.opacity(0.25), location: 1.0),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+            }
+            .overlay {
+                // Specular glass highlight rim
+                cardShape
+                    .strokeBorder(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.38), location: 0.0),
+                                .init(color: .white.opacity(0.10), location: 0.28),
+                                .init(color: .white.opacity(0.04), location: 0.72),
+                                .init(color: .white.opacity(0.24), location: 1.0),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: max(1, 1.2 * scale)
+                    )
+            }
+            .shadow(color: .black.opacity(0.38), radius: max(12, 24 * scale), x: 0, y: max(6, 12 * scale))
+            .shadow(color: .black.opacity(0.15), radius: max(4, 6 * scale), x: 0, y: max(2, 3 * scale))
+    }
+
+    @ViewBuilder
+    private func screenView(screenSize: CGSize) -> some View {
+        if profile.screen.shape == .circle {
             screen()
                 .frame(width: screenSize.width, height: screenSize.height)
-                .clipShape(screenShape(screenSize))
-                .overlay(screenShape(screenSize).stroke(.black.opacity(0.9), lineWidth: max(1, 2 * scale)))
-        }
-        .frame(width: g.total.width * scale, height: g.total.height * scale)
-    }
-
-    private func screenShape(_ size: CGSize) -> AnyShape {
-        if profile.screen.shape == .circle {
-            return AnyShape(Circle())
-        }
-        return AnyShape(RoundedRectangle(cornerRadius: profile.screen.cornerRadius * scale, style: .continuous))
-    }
-
-    @ViewBuilder
-    private func caseShape(body: CGSize) -> some View {
-        let metal = LinearGradient(colors: [Color(white: 0.36), Color(white: 0.16), Color(white: 0.26)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-        switch profile.family {
-        case .watch:
-            ZStack {
-                Circle().fill(metal)
-                Circle().strokeBorder(LinearGradient(colors: [.white.opacity(0.35), .black.opacity(0.5)],
-                                                     startPoint: .top, endPoint: .bottom), lineWidth: max(1, 3 * scale))
-                Circle().fill(Color.black).padding(body.width * 0.035)
-            }
-            .frame(width: body.width, height: body.height)
-            .shadow(color: .black.opacity(0.45), radius: 18 * scale, y: 8 * scale)
-        case .band:
-            let r = (profile.screen.cornerRadius + geo.screen.width * 0.1) * scale
-            ZStack {
-                RoundedRectangle(cornerRadius: r, style: .continuous).fill(metal)
-                RoundedRectangle(cornerRadius: r, style: .continuous)
-                    .strokeBorder(LinearGradient(colors: [.white.opacity(0.35), .black.opacity(0.5)],
-                                                 startPoint: .top, endPoint: .bottom), lineWidth: max(1, 3 * scale))
-                RoundedRectangle(cornerRadius: r * 0.82, style: .continuous).fill(Color.black)
-                    .padding(geo.screen.width * 0.045 * scale)
-            }
-            .frame(width: body.width, height: body.height)
-            .shadow(color: .black.opacity(0.45), radius: 18 * scale, y: 8 * scale)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: max(0.5, 1 * scale)))
+                .shadow(color: .black.opacity(0.55), radius: 10 * scale, y: 4 * scale)
+        } else {
+            let r = profile.screen.cornerRadius * scale
+            screen()
+                .frame(width: screenSize.width, height: screenSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: r, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: max(0.5, 1 * scale)))
+                .shadow(color: .black.opacity(0.55), radius: 10 * scale, y: 4 * scale)
         }
     }
 
-    @ViewBuilder
-    private func straps(body: CGSize) -> some View {
-        let strap = LinearGradient(colors: [accent.opacity(0.55), accent.opacity(0.32)], startPoint: .leading, endPoint: .trailing)
-        switch profile.family {
-        case .watch:
-            VStack(spacing: 0) {
-                UnevenRoundedRectangle(topLeadingRadius: body.width * 0.08, topTrailingRadius: body.width * 0.08)
-                    .fill(strap)
-                    .frame(width: body.width * 0.52, height: body.height * 0.42)
-                Spacer(minLength: body.height * 0.66)
-                UnevenRoundedRectangle(bottomLeadingRadius: body.width * 0.08, bottomTrailingRadius: body.width * 0.08)
-                    .fill(strap)
-                    .frame(width: body.width * 0.52, height: body.height * 0.42)
-            }
-            .frame(height: body.height * 1.5)
-        case .band:
-            VStack(spacing: 0) {
-                UnevenRoundedRectangle(topLeadingRadius: body.width * 0.2, topTrailingRadius: body.width * 0.2)
-                    .fill(strap)
-                    .frame(width: body.width * 0.78, height: body.height * 0.3)
-                Spacer(minLength: body.height * 0.74)
-                UnevenRoundedRectangle(bottomLeadingRadius: body.width * 0.2, bottomTrailingRadius: body.width * 0.2)
-                    .fill(strap)
-                    .frame(width: body.width * 0.78, height: body.height * 0.3)
-            }
-            .frame(height: body.height * 1.34)
-        }
-    }
-
-    @ViewBuilder
-    private func buttons(body: CGSize) -> some View {
-        ForEach(profile.buttons) { b in
-            HardwareButtonView(button: b, scale: scale) { down in onButton?(b, down) }
-                .offset(offset(for: b.placement, body: body))
-        }
-    }
-
-    private func offset(for placement: DeviceProfile.HardwareButton.Placement, body: CGSize) -> CGSize {
-        let r = body.width / 2 * 1.01
-        func polar(_ deg: Double) -> CGSize {
-            let a = deg * .pi / 180
-            return CGSize(width: cos(a) * r, height: -sin(a) * r)
-        }
-        switch (profile.family, placement) {
-        case (.watch, .crown): return polar(28)
-        case (.watch, .rightUpper): return polar(40)
-        case (.watch, .rightLower): return polar(-28)
-        case (.watch, .left): return polar(180)
-        case (.band, .crown), (.band, .rightUpper): return CGSize(width: body.width * 0.505, height: -body.height * 0.18)
-        case (.band, .rightLower): return CGSize(width: body.width * 0.505, height: body.height * 0.12)
-        case (.band, .left): return CGSize(width: -body.width * 0.505, height: 0)
+    private func cardCornerRadius(screenSize: CGSize, padding: CGFloat) -> CGFloat {
+        switch profile.screen.shape {
+        case .circle:
+            return max(24, (screenSize.width + padding * 2) * 0.18)
+        case .roundedRect:
+            return (profile.screen.cornerRadius * scale) + padding * 0.45
         }
     }
 }
 
-/// A side button or crown. Hold to keep it pressed.
-struct HardwareButtonView: View {
-    let button: DeviceProfile.HardwareButton
+/// Independent vertical column of hardware buttons.
+struct HardwareButtonColumn: View {
+    let buttons: [DeviceProfile.HardwareButton]
+    let accent: Color
     let scale: CGFloat
-    let onPress: (Bool) -> Void
-    @State private var pressed = false
+    let onPress: (DeviceProfile.HardwareButton, Bool) -> Void
 
     var body: some View {
-        let isCrown = button.placement == .crown
-        let w = (isCrown ? 30 : 16) * scale * 2.4
-        let h = (isCrown ? 52 : 70) * scale * 1.4
-        RoundedRectangle(cornerRadius: isCrown ? 6 * scale * 2 : w / 2, style: .continuous)
-            .fill(LinearGradient(colors: pressed ? [Color(white: 0.2), Color(white: 0.3)] : [Color(white: 0.55), Color(white: 0.25)],
-                                 startPoint: .leading, endPoint: .trailing))
-            .overlay {
-                if isCrown {
-                    VStack(spacing: max(1, 3 * scale)) {
-                        ForEach(0..<5, id: \.self) { _ in
-                            Rectangle().fill(.black.opacity(0.35)).frame(height: max(0.5, 1.5 * scale))
-                        }
-                    }
-                    .padding(.horizontal, 2)
+        VStack(spacing: max(8, 12 * scale)) {
+            Text("BUTTONS")
+                .font(.system(size: max(8, 9 * scale), weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary.opacity(0.7))
+                .tracking(1.4)
+                .padding(.top, 2)
+
+            ForEach(buttons) { button in
+                HardwareButtonView(button: button, accent: accent, scale: scale) { down in
+                    onPress(button, down)
                 }
             }
-            .frame(width: max(8, w), height: max(14, h))
-            .scaleEffect(pressed ? 0.94 : 1, anchor: .leading)
-            .contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 0)
+        }
+        .padding(.horizontal, max(8, 10 * scale))
+        .padding(.vertical, max(10, 14 * scale))
+        .background {
+            let dockShape = RoundedRectangle(cornerRadius: max(16, 20 * scale), style: .continuous)
+            ZStack {
+                dockShape.fill(Color(white: 0.10).opacity(0.80))
+                dockShape.fill(.ultraThinMaterial)
+            }
+            .overlay {
+                dockShape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.28), .white.opacity(0.06), .white.opacity(0.18)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+            }
+        }
+        .shadow(color: .black.opacity(0.35), radius: max(10, 16 * scale), y: max(4, 8 * scale))
+    }
+}
+
+/// A tactile glass button representing a hardware button or crown.
+/// Hold to keep it pressed.
+struct HardwareButtonView: View {
+    let button: DeviceProfile.HardwareButton
+    let accent: Color
+    let scale: CGFloat
+    let onPress: (Bool) -> Void
+
+    @State private var pressed = false
+    @State private var hovered = false
+
+    var body: some View {
+        let btnWidth = max(52, 64 * scale)
+        let btnHeight = max(46, 54 * scale)
+        let btnShape = RoundedRectangle(cornerRadius: max(10, 14 * scale), style: .continuous)
+
+        VStack(spacing: 3) {
+            ZStack {
+                // Glass background with active accent glow
+                btnShape
+                    .fill(pressed ? accent.opacity(0.35) : (hovered ? Color.white.opacity(0.14) : Color.white.opacity(0.07)))
+                    .overlay {
+                        btnShape.strokeBorder(
+                            pressed ? accent.opacity(0.85) : (hovered ? Color.white.opacity(0.35) : Color.white.opacity(0.16)),
+                            lineWidth: pressed ? 1.5 : 1
+                        )
+                    }
+                    .frame(width: btnWidth, height: btnHeight)
+                    .shadow(color: pressed ? accent.opacity(0.45) : .clear, radius: 8)
+
+                VStack(spacing: max(2, 3 * scale)) {
+                    Image(systemName: iconName)
+                        .font(.system(size: max(15, 19 * scale), weight: .semibold))
+                        .foregroundStyle(pressed ? accent : (hovered ? .white : .white.opacity(0.88)))
+
+                    Text(button.title)
+                        .font(.system(size: max(8, 10 * scale), weight: .medium))
+                        .foregroundStyle(pressed ? accent : (hovered ? .white : .secondary))
+                        .lineLimit(1)
+                }
+            }
+            .scaleEffect(pressed ? 0.92 : (hovered ? 1.03 : 1.0))
+            .animation(.spring(response: 0.18, dampingFraction: 0.65), value: pressed)
+            .animation(.easeInOut(duration: 0.12), value: hovered)
+
+            // Keyboard shortcut tag
+            if let hint = shortcutHint {
+                Text(hint)
+                    .font(.system(size: max(7, 8.5 * scale), weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.white.opacity(0.08), in: Capsule())
+            }
+        }
+        .contentShape(Rectangle())
+        .onHover { hovered = $0 }
+        .gesture(
+            DragGesture(minimumDistance: 0)
                 .onChanged { _ in
                     if !pressed {
                         pressed = true
@@ -187,10 +253,33 @@ struct HardwareButtonView: View {
                 .onEnded { _ in
                     pressed = false
                     onPress(false)
-                })
-            .help("\(button.title) — hold to keep pressed")
-            .accessibilityLabel(button.title)
-            .accessibilityAddTraits(.isButton)
+                }
+        )
+        .help("\(button.title) · Hold to keep pressed\(shortcutHint.map { " · Shortcut: \($0)" } ?? "")")
+        .accessibilityLabel(button.title)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var iconName: String {
+        switch button.placement {
+        case .crown:
+            return "digitalcrown.horizontal.press"
+        case .rightUpper:
+            return "house.fill"
+        case .rightLower:
+            return "button.horizontal.bottom.press"
+        case .left:
+            return "arrow.turn.up.left"
+        }
+    }
+
+    private var shortcutHint: String? {
+        switch button.qcode {
+        case "home": return "Home"
+        case "pgdn": return "PgDn"
+        case "pgup": return "PgUp"
+        default: return nil
+        }
     }
 }
 
@@ -203,21 +292,24 @@ struct DeviceGlyph: View {
     var body: some View {
         let accent = profile.flatMap { Color(hex: $0.accent) } ?? .gray
         ZStack {
-            Circle().fill(active ? accent.opacity(0.25) : Color.secondary.opacity(0.12))
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                .fill(active ? accent.opacity(0.25) : Color.white.opacity(0.06))
+                .overlay {
+                    RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                        .strokeBorder(active ? accent.opacity(0.55) : Color.white.opacity(0.12), lineWidth: 1)
+                }
             Group {
                 if profile?.family == .band {
                     RoundedRectangle(cornerRadius: size * 0.12, style: .continuous)
-                        .fill(Color(white: 0.15))
+                        .fill(Color.black)
                         .overlay(RoundedRectangle(cornerRadius: size * 0.12, style: .continuous)
-                            .strokeBorder(Color(white: 0.55), lineWidth: 1))
-                        .frame(width: size * 0.36, height: size * 0.56)
+                            .strokeBorder(active ? accent : Color(white: 0.55), lineWidth: 1))
+                        .frame(width: size * 0.42, height: size * 0.62)
                 } else {
-                    ZStack {
-                        Capsule().fill(accent.opacity(0.5)).frame(width: size * 0.28, height: size * 0.78)
-                        Circle().fill(Color(white: 0.15))
-                            .overlay(Circle().strokeBorder(Color(white: 0.55), lineWidth: 1))
-                            .frame(width: size * 0.5, height: size * 0.5)
-                    }
+                    Circle()
+                        .fill(Color.black)
+                        .overlay(Circle().strokeBorder(active ? accent : Color(white: 0.55), lineWidth: 1))
+                        .frame(width: size * 0.58, height: size * 0.58)
                 }
             }
         }
