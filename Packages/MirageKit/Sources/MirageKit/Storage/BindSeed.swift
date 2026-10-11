@@ -20,17 +20,24 @@ enum BindSeed {
         Key(name: "persist.miwear_seqnum", template: "1") { $0.seqnum },
     ]
 
+    public static func linkKey(for profileID: String) -> String {
+        profileID == "n66" ? "fcd5cb68f9497e4a323dccf1583496ef" : "f3f7259bdd62752b186ea0a7c5108bfd"
+    }
+
     /// Writes the bond databases into the data partition, which starts at
     /// `spec.systemPages` (Band 9 / Band 10 layout) and is still erased.
-    static func apply(to nandURL: URL, spec: NANDSpec, binding: BindInfo) throws {
+    public static func apply(to nandURL: URL, spec: NANDSpec, binding: BindInfo, profileID: String = "") throws {
         guard binding.bound, let dataFirst = spec.systemPages else { return }
         let persist = try persistDatabase(for: binding)
         let record = try recordDatabase(for: binding)
+        let btFile = profileID == "n66" ? "bt_config.db" : "bt_storage.db"
+        let btData = try template(btFile)
         let objects: [Object] = [
             .directory(oid: 258, parent: 1, name: "misc"),
             .directory(oid: 259, parent: 258, name: "bt"),
             .file(oid: 257, parent: 1, name: "persist.db", data: persist),
             .file(oid: 260, parent: 259, name: "miwear_record.db", data: record),
+            .file(oid: 261, parent: 259, name: btFile, data: btData),
         ]
         let pages = yaffsPages(objects)
         let pageBytes = spec.pageSize + spec.oobSize
