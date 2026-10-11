@@ -75,7 +75,7 @@ final class AstroBoxService {
 
     private func call(_ method: String, _ params: [String: Any] = [:], onStart: ((UInt64) -> Void)? = nil) async throws -> Any {
         guard AstroBoxFFI.available else {
-            throw MirageError.process("This Mirage build doesn’t include AstroBox core (build it with make astrobox).")
+            throw MirageError.process("This Mirage build doesn’t include the companion core (build it with make astrobox).")
         }
         let data = try JSONSerialization.data(withJSONObject: params)
         let json = String(decoding: data, as: UTF8.self)
@@ -93,7 +93,7 @@ final class AstroBoxService {
             if msg["ok"] as? Bool == true {
                 cont.resume(returning: msg["result"] ?? NSNull())
             } else {
-                cont.resume(throwing: MirageError.process(msg["error"] as? String ?? "AstroBox error"))
+                cont.resume(throwing: MirageError.process(msg["error"] as? String ?? "Companion core error"))
             }
         case "progress":
             guard let id = (msg["id"] as? NSNumber)?.uint64Value, let i = installs.firstIndex(where: { $0.id == id }) else { return }

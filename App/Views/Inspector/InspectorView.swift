@@ -163,7 +163,7 @@ private struct InfoTab: View {
         .confirmationDialog("Delete “\(device.name)”?", isPresented: $confirmDelete) {
             Button("Delete Device", role: .destructive) { model.deleteDevice(device.id) }
         } message: {
-            Text("Its storage images, logs and AstroBox pairing data are moved out of the library and deleted.")
+            Text("Its storage images, logs and companion pairing data are moved out of the library and deleted.")
         }
     }
 

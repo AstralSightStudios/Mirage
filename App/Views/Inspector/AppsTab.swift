@@ -2,7 +2,7 @@ import MirageKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Watchfaces and quick apps on the device, through AstroBox core over the
+/// Watchfaces and quick apps on the device, through the companion core over the
 /// emulator's Bluetooth bridge.
 struct AppsTab: View {
     @Environment(AppModel.self) private var model
@@ -17,17 +17,17 @@ struct AppsTab: View {
         let connected = ab.isConnected(device.id)
         VStack(alignment: .leading, spacing: 0) {
             if !ab.isAvailable {
-                Unavailable(icon: "shippingbox", title: "AstroBox core not built",
+                Unavailable(icon: "shippingbox", title: "Companion core not built",
                             text: "Build it with `make astrobox`, then rebuild Mirage, to manage watchfaces and quick apps.")
             } else if !device.binding.bound {
                 Unavailable(icon: "link.badge.plus", title: "Device not bound",
-                            text: "AstroBox connects to bound devices. Turn on “Bound to a phone” in Binding.")
+                            text: "The companion core connects to bound devices. Turn on “Bound to a phone” in Binding.")
             } else if !device.options.bluetoothBridge {
                 Unavailable(icon: "antenna.radiowaves.left.and.right.slash", title: "Bluetooth bridge off",
                             text: "Enable the Bluetooth bridge in Device Settings.")
             } else if !session.state.isActive {
                 Unavailable(icon: "power", title: "Device not running",
-                            text: "Boot the device, then connect AstroBox to it.")
+                            text: "Boot the device, then connect the companion core to it.")
             } else {
                 connection(ab: ab, session: session, connected: connected)
                 if connected {
@@ -39,7 +39,7 @@ struct AppsTab: View {
                     Label(err, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption).foregroundStyle(.orange).padding(.top, 10).textSelection(.enabled)
                 }
-                DisclosureGroup("AstroBox Log", isExpanded: $showLog) {
+                DisclosureGroup("Companion Log", isExpanded: $showLog) {
                     ScrollView {
                         Text(ab.log.suffix(300).joined(separator: "\n"))
                             .font(.system(size: 10, design: .monospaced))
@@ -89,7 +89,7 @@ struct AppsTab: View {
 
     @ViewBuilder
     private func connection(ab: AstroBoxService, session: DeviceSession, connected: Bool) -> some View {
-        InspectorSection(title: "AstroBox") {
+        InspectorSection(title: "Companion") {
             HStack(spacing: 10) {
                 Image(systemName: connected ? "checkmark.circle.fill" : "antenna.radiowaves.left.and.right")
                     .foregroundStyle(connected ? .green : .secondary)

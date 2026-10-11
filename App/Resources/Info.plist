@@ -29,7 +29,7 @@
 	<key>MirageSourceRoot</key>
 	<string>$(SRCROOT)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>AstroBox core can also reach real bands over Bluetooth.</string>
+	<string>The companion core can also reach real bands over Bluetooth.</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

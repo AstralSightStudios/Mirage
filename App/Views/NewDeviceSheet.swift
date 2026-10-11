@@ -60,13 +60,13 @@ struct NewDeviceSheet: View {
                             }
                         } header: { Text("Binding") } footer: {
                             Text(binding.bound
-                                 ? "The device starts out already bound, so AstroBox can connect with this AuthKey. Use the key of an existing AstroBox setup to reuse it."
+                                 ? "The device starts out already bound, so a companion app can connect with this AuthKey. Use the key of an existing companion setup to reuse it."
                                  : "The device starts in the setup wizard. Offline first-time binding isn’t possible with this firmware.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         Section("Boot") {
                             Toggle("NuttX shell on the console", isOn: $options.shell)
-                            Toggle("Bluetooth bridge for AstroBox", isOn: $options.bluetoothBridge)
+                            Toggle("Bluetooth bridge for companion apps", isOn: $options.bluetoothBridge)
                         }
                         if let id = identity {
                             Section("Factory Identity", isExpanded: $advanced) {

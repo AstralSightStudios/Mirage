@@ -95,10 +95,10 @@ public struct FactoryIdentity: Codable, Hashable, Sendable {
 /// The band's view of the phone it is bound to. The firmware binds over
 /// the server-PSK flow only, so an offline emulator cannot be bound for the
 /// first time; instead it starts out "already bound" with these keys, and
-/// AstroBox connects with the token key as its AuthKey.
+/// The companion core connects with the token key as its AuthKey.
 public struct BindInfo: Codable, Hashable, Sendable {
     public var bound: Bool
-    /// persist.miwear_token_key: 16 bytes hex; AstroBox's AuthKey.
+    /// persist.miwear_token_key: 16 bytes hex; the companion core's AuthKey.
     public var authKey: String
     public var userID: String
     public var beaconKey: String
@@ -137,7 +137,7 @@ public struct BindInfo: Codable, Hashable, Sendable {
         guard !userID.isEmpty else { throw MirageError.invalid("User ID must not be empty") }
     }
 
-    /// The host (AstroBox) address the band considers its bonded companion:
+    /// The host (companion) address the band considers its bonded companion:
     /// the emulated Bluetooth bridge's local address.
     public static let companionAddress = "C0:FF:EE:00:00:01"
 
@@ -165,7 +165,7 @@ public struct BindInfo: Codable, Hashable, Sendable {
 public struct RuntimeOptions: Codable, Hashable, Sendable {
     /// Start the firmware's built-in NuttX shell on the console UART.
     public var shell: Bool
-    /// Serve the band's Bluetooth radio to a peer host (AstroBox) on TCP.
+    /// Serve the band's Bluetooth radio to a peer host (companion core) on TCP.
     public var bluetoothBridge: Bool
     /// TCP port of the Bluetooth bridge; 0 picks a free one at boot.
     public var bluetoothPort: Int

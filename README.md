@@ -2,7 +2,7 @@
 
 **Mirage** 是专为 **qemu-miwear** 设计的一站式原生 macOS 模拟器管理器与调试工作台。
 
-参考 Apple Xcode **Devices & Simulators** / **Device Hub** 的交互范式构建，深度融合 QEMU 模拟核心与 AstroBox 设备管理能力，让固件导入、镜像构建、模拟运行、外设交互、应用安装与 NSH 调试无缝汇聚在单一的原生界面中。
+参考 Apple Xcode **Devices & Simulators** / **Device Hub** 的交互范式构建，深度融合 QEMU 模拟核心与伴侣端（companion core）的设备管理能力，让固件导入、镜像构建、模拟运行、外设交互、应用安装与 NSH 调试无缝汇聚在单一的原生界面中。
 
 ---
 

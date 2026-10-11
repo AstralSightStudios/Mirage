@@ -3,7 +3,7 @@ import SwiftUI
 
 /// AuthKey and the rest of the band's binding state, plus its factory
 /// identity. Written into the factory partition (persist.miwear_* and
-/// ro.factory.*), so they survive erases and are what AstroBox needs.
+/// ro.factory.*), so they survive erases and are what companion apps need.
 struct BindingTab: View {
     @Environment(AppModel.self) private var model
     let device: VirtualDevice
@@ -20,7 +20,7 @@ struct BindingTab: View {
                 Toggle(isOn: bind(\.binding.bound)) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Bound to a phone")
-                        Text(d.binding.bound ? "Boots past setup; AstroBox connects with the AuthKey."
+                        Text(d.binding.bound ? "Boots past setup; A companion app connects with the AuthKey."
                                              : "Boots into the setup wizard, unbound.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
@@ -42,7 +42,7 @@ struct BindingTab: View {
                     .controlSize(.small)
                     .padding(.vertical, 8)
                 }
-                Text("The band’s persist.miwear_token_key. AstroBox (and Mirage’s Apps tab) authenticate with it; a new key means pairing again.")
+                Text("The band’s persist.miwear_token_key. Companion apps (and Mirage’s Apps tab) authenticate with it; a new key means pairing again.")
                     .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4).padding(.top, 4)
                 InspectorSection(title: "Bind Keys") {
                     TextRow(title: "User ID", text: bind(\.binding.userID))

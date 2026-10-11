@@ -317,7 +317,7 @@ struct DeviceSettingsSheet: View {
                     }
                     Toggle(isOn: $options.bluetoothBridge) {
                         Text("Bluetooth bridge")
-                        Text("Serves the band’s radio as a standard HCI controller over TCP, for AstroBox.")
+                        Text("Serves the band’s radio as a standard HCI controller over TCP, for companion apps.")
                     }
                     if options.bluetoothBridge {
                         TextField("Port", text: $port, prompt: Text("Automatic"))
