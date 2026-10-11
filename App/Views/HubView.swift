@@ -33,15 +33,14 @@ struct HubView: View {
             }
             .inspectorColumnWidth(min: 290, ideal: 330, max: 440)
             .toolbar {
-                ToolbarItemGroup {
+                ToolbarSpacer(.flexible, placement: .primaryAction)
+                ToolbarItemGroup(placement: .primaryAction) {
                     Button { showSettings = true } label: { Label("Device Settings", systemImage: "slider.horizontal.3") }
                         .disabled(model.selection == nil)
-                    Button {
-                        showConsole = true
-                    } label: { Label("Console", systemImage: "doc.text") }
+                    Button { showConsole.toggle() } label: { Label("Console", systemImage: "doc.text") }
                         .disabled(model.selection == nil)
-                        .help("Show Console")
-                    Button { showInspector.toggle() } label: { Label("Inspector", systemImage: "info") }
+                        .help("Toggle NSH Console")
+                    Button { showInspector.toggle() } label: { Label("Inspector", systemImage: "sidebar.right") }
                 }
             }
         }
@@ -69,9 +68,14 @@ struct HubView: View {
                         .frame(height: consoleHeight)
                 }
             }
+            // Keep the split column's minimum independent of the console drawer.
+            // Otherwise its hosting controller can feed changing minima back into layout.
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
             .navigationTitle(d.name)
             .navigationSubtitle(model.firmware(d.firmwareID).map { "HyperOS \($0.version)" } ?? "")
-            .toolbar { DeviceToolbar(device: d, zoom: $zoom, scaleBox: scaleBox, showConsole: $showConsole) }
+            .toolbar {
+                DeviceToolbar(device: d, showConsole: $showConsole)
+            }
             .background(Color(nsColor: .underPageBackgroundColor).opacity(0.35))
         } else {
             ContentUnavailableView {
@@ -121,37 +125,36 @@ extension FocusedValues {
 private struct DeviceToolbar: ToolbarContent {
     @Environment(AppModel.self) private var model
     let device: VirtualDevice
-    @Binding var zoom: ZoomMode
-    let scaleBox: ScaleBox
     @Binding var showConsole: Bool
 
     var body: some ToolbarContent {
         let session = model.session(device.id)
         let profile = model.profile(device.profileID)
         let active = session.state.isActive
+
         ToolbarItemGroup {
-            if let profile, !profile.buttons.isEmpty {
-                ForEach(profile.buttons) { b in
-                    Button { Task { await session.press(b.qcode) } } label: { Label(b.title, systemImage: b.symbol) }
-                        .help("Press \(b.title)")
-                        .disabled(session.state != .running)
+            if let profile {
+                ForEach(profile.buttons) { button in
+                    Button {
+                        Task { await session.press(button.qcode) }
+                    } label: {
+                        Label(button.title, systemImage: button.symbol)
+                    }
+                    .help("Press \(button.title)")
+                    .disabled(session.state != .running)
                 }
             }
             Button { screenshot(session) } label: { Label("Screenshot", systemImage: "camera") }
                 .help("Save Screenshot")
                 .disabled(!active)
-            Toggle(isOn: $showConsole) { Label("Console", systemImage: "terminal") }
-                .help("Show Console")
+            Button {
+                showConsole.toggle()
+            } label: {
+                Label("Console", systemImage: "terminal")
+            }
+            .help("Toggle NSH Console")
         }
-        ToolbarSpacer(.fixed)
-        ToolbarItemGroup {
-            Button { zoom = .scale(max(0.25, zoom.resolve(fit: scaleBox.fit) / 1.25)) } label: { Label("Zoom Out", systemImage: "minus.magnifyingglass") }
-            Button { zoom = .fit } label: { Label("Fit", systemImage: "arrow.up.left.and.down.right.magnifyingglass") }
-                .help("Zoom to Fit")
-            Button { zoom = .scale(1 / (NSScreen.main?.backingScaleFactor ?? 2)) } label: { Label("Actual Size", systemImage: "1.magnifyingglass") }
-                .help("Pixel Accurate")
-            Button { zoom = .scale(min(4, zoom.resolve(fit: scaleBox.fit) * 1.25)) } label: { Label("Zoom In", systemImage: "plus.magnifyingglass") }
-        }
+
         ToolbarSpacer(.fixed)
         ToolbarItemGroup {
             if active {
@@ -186,6 +189,7 @@ private struct DeviceToolbar: ToolbarContent {
                 Label("More", systemImage: "ellipsis")
             }
         }
+
     }
 
     private func screenshot(_ session: DeviceSession) {

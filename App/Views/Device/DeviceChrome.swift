@@ -24,11 +24,37 @@ struct ChromeGeometry {
 
     /// Total bounding size in panel pixels for stage fit calculation.
     var total: CGSize {
-        CGSize(width: card.width + buttonColumnWidth, height: card.height)
+        CGSize(width: card.width + buttonColumnWidth * 2, height: card.height)
     }
 
     var screenCorner: CGFloat {
         profile.screen.shape == .circle ? min(screen.width, screen.height) / 2 : profile.screen.cornerRadius
+    }
+}
+
+/// Reserves equal space on both sides of the panel, with the dock only on the right.
+/// The screen and its caption share the stage's center, regardless of dock width.
+private struct ScreenCenteredLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let panel = subviews[0].sizeThatFits(.unspecified)
+        guard subviews.count > 1 else { return panel }
+        let dock = subviews[1].sizeThatFits(.unspecified)
+        return CGSize(width: panel.width + 2 * (spacing + dock.width),
+                      height: max(panel.height, dock.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let panel = subviews[0].sizeThatFits(.unspecified)
+        subviews[0].place(at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center,
+                          proposal: ProposedViewSize(panel))
+        if subviews.count > 1 {
+            let dock = subviews[1].sizeThatFits(.unspecified)
+            subviews[1].place(at: CGPoint(x: bounds.midX + panel.width / 2 + spacing,
+                                         y: bounds.midY), anchor: .leading,
+                              proposal: ProposedViewSize(dock))
+        }
     }
 }
 
@@ -49,7 +75,7 @@ struct DeviceChrome<Screen: View>: View {
         let screenSize = CGSize(width: g.screen.width * scale, height: g.screen.height * scale)
         let padding = max(8, g.cardPadding * scale)
 
-        HStack(alignment: .center, spacing: max(12, 16 * scale)) {
+        ScreenCenteredLayout(spacing: max(12, 16 * scale)) {
             // Liquid glass card enclosing the screen with thin padding
             glassScreenCard(screenSize: screenSize, padding: padding)
 
@@ -290,7 +316,7 @@ struct HardwareButtonView: View {
         case .rightUpper:
             return "house.fill"
         case .rightLower:
-            return "button.horizontal.bottom.press"
+            return "button.horizontal.top.press"
         case .left:
             return "arrow.turn.up.left"
         }

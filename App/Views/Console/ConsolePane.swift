@@ -96,7 +96,7 @@ private struct ShellBadge: View {
     }
 }
 
-/// Owns the SwiftTerm view so it survives SwiftUI updates.
+/// Routes console output to the currently mounted terminal view.
 @MainActor
 final class TerminalController: NSObject, ObservableObject, TerminalViewDelegate {
     private(set) weak var activeView: TerminalView?
@@ -104,9 +104,10 @@ final class TerminalController: NSObject, ObservableObject, TerminalViewDelegate
     private var token: UUID?
 
     func attach(_ view: TerminalView, session: DeviceSession) {
-        self.activeView = view
-        guard self.session !== session else { return }
-        if let token, let s = self.session { s.removeObserver(token) }
+        guard activeView !== view || self.session !== session else { return }
+        unbind()
+        activeView = view
+        view.terminalDelegate = self
         self.session = session
         clear()
         token = session.observeConsole { [weak self] data in
@@ -114,8 +115,14 @@ final class TerminalController: NSObject, ObservableObject, TerminalViewDelegate
         }
     }
 
-    func unbind() {
+    func detach(_ view: TerminalView) {
+        guard activeView === view else { return }
+        unbind()
+    }
+
+    private func unbind() {
         if let token, let session { session.removeObserver(token) }
+        activeView?.terminalDelegate = nil
         token = nil
         session = nil
         activeView = nil
@@ -161,9 +168,10 @@ private struct TerminalHost: NSViewRepresentable {
     let controller: TerminalController
     let session: DeviceSession
 
+    func makeCoordinator() -> TerminalController { controller }
+
     func makeNSView(context: Context) -> TerminalView {
         let view = TerminalView(frame: NSRect(x: 0, y: 0, width: 600, height: 240))
-        view.terminalDelegate = controller
         view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         view.nativeBackgroundColor = NSColor(white: 0.08, alpha: 1)
         view.nativeForegroundColor = NSColor(white: 0.9, alpha: 1)
@@ -177,8 +185,8 @@ private struct TerminalHost: NSViewRepresentable {
         controller.attach(view, session: session)
     }
 
-    static func dismantleNSView(_ view: TerminalView, coordinator: ()) {
-        view.terminalDelegate = nil
+    static func dismantleNSView(_ view: TerminalView, coordinator: TerminalController) {
+        coordinator.detach(view)
     }
 }
 
