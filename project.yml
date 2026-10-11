@@ -65,9 +65,9 @@ targets:
           - -lc
           - -lm
     preBuildScripts:
-      - name: Build AstroBox Bridge
+      - name: Build Companion Core
         script: |
-          "$SRCROOT/Scripts/build-astrobox.sh"
+          "$SRCROOT/Scripts/build-companion-core.sh"
         basedOnDependencyAnalysis: false
     postBuildScripts:
       - name: Bundle QEMU
