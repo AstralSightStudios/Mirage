@@ -1,0 +1,483 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		010D873DA8FEDA64BC1106E1 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = A51CDFA7C73CBC2D36BE9E9C /* SwiftTerm */; };
+		27C8A7B47E0E1911DD5D98DB /* DeviceChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7397802AF6A76F4E5B19ED1 /* DeviceChrome.swift */; };
+		45271FA449F5E06782A8FEFB /* ScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE153033D9513574027A01D /* ScreenView.swift */; };
+		4B51E2C9DAA080EF89B09D51 /* MirageKit in Frameworks */ = {isa = PBXBuildFile; productRef = BE87711245061830718926B6 /* MirageKit */; };
+		51FCE73DE97612383EFDB14E /* DeviceStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA3A53FEBEFC4D1DDB823A4 /* DeviceStage.swift */; };
+		74B5F40B404A1E2275672F58 /* AstroBoxService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */; };
+		78DB0EEE4783B23FF4E4F99F /* ArchiveWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26BBF700F6E96963D07F6C06 /* ArchiveWindow.swift */; };
+		8C848AFABCD2284F2E4F38F9 /* ConsolePane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C541A21E4B108F84089DB41 /* ConsolePane.swift */; };
+		8E68E01406EA697785B4E5D2 /* MirageApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B64956B64905E47BE3259C3 /* MirageApp.swift */; };
+		BF2DDB1EF9CD1CC38585CD18 /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E2C6E737F42510412EB521 /* InspectorView.swift */; };
+		C5FB29C61747D13A757904F1 /* ProfilesWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63A8FD0502C7F9519BEA5CAF /* ProfilesWindow.swift */; };
+		C67AB9CF6ABF3024575CBA26 /* NewDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C47C720649EC76C7ECB2A0 /* NewDeviceSheet.swift */; };
+		C7E2C3F0CAD8F0CC1B462D00 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D4E2ED21A166D0D0983A10D /* SettingsView.swift */; };
+		C984976E96DE16DC11689DF2 /* BindingTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B1922BCAA70B15786085E5 /* BindingTab.swift */; };
+		CFE9052AEEBCD222239DD960 /* ArchiveModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE324B50FDD58CE97A9E1C29 /* ArchiveModel.swift */; };
+		DBB3EB2E63A2E0AECAB060A0 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96D1CF627AADBF304BCDB9F3 /* AppModel.swift */; };
+		E0D806B9AE17654D6F5B684F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFBE0B053EDA634D3EF481A2 /* Assets.xcassets */; };
+		F8694AC5C4C3DF5BA1CC2901 /* HubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E8D58DAADF6C500FD0ED481 /* HubView.swift */; };
+		FC8987CAF3A13F5D4EA5D164 /* AppsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21ECF0E289D29B85D2540CA2 /* AppsTab.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0BA3A53FEBEFC4D1DDB823A4 /* DeviceStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceStage.swift; sourceTree = "<group>"; };
+		12E2C6E737F42510412EB521 /* InspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorView.swift; sourceTree = "<group>"; };
+		1F1B24601B3BA9FBB7FA9EBA /* Mirage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mirage.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		21B1922BCAA70B15786085E5 /* BindingTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BindingTab.swift; sourceTree = "<group>"; };
+		21ECF0E289D29B85D2540CA2 /* AppsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsTab.swift; sourceTree = "<group>"; };
+		26BBF700F6E96963D07F6C06 /* ArchiveWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveWindow.swift; sourceTree = "<group>"; };
+		26FF3071055E1CD166F6FFDB /* MirageKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MirageKit; path = Packages/MirageKit; sourceTree = SOURCE_ROOT; };
+		3EE153033D9513574027A01D /* ScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenView.swift; sourceTree = "<group>"; };
+		46C47C720649EC76C7ECB2A0 /* NewDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDeviceSheet.swift; sourceTree = "<group>"; };
+		4E8D58DAADF6C500FD0ED481 /* HubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubView.swift; sourceTree = "<group>"; };
+		5D4E2ED21A166D0D0983A10D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AstroBoxService.swift; sourceTree = "<group>"; };
+		63A8FD0502C7F9519BEA5CAF /* ProfilesWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesWindow.swift; sourceTree = "<group>"; };
+		7B64956B64905E47BE3259C3 /* MirageApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirageApp.swift; sourceTree = "<group>"; };
+		7BEDF02B74D6333C6030FA8B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8E747CB77882FCB30FC30C40 /* Mirage.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Mirage.entitlements; sourceTree = "<group>"; };
+		96D1CF627AADBF304BCDB9F3 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		9C541A21E4B108F84089DB41 /* ConsolePane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsolePane.swift; sourceTree = "<group>"; };
+		A7397802AF6A76F4E5B19ED1 /* DeviceChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceChrome.swift; sourceTree = "<group>"; };
+		AE324B50FDD58CE97A9E1C29 /* ArchiveModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveModel.swift; sourceTree = "<group>"; };
+		DFBE0B053EDA634D3EF481A2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F3937192ED9C13F0E8A2250F /* Mirage-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Mirage-Bridging-Header.h"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D685DA08310A8C12F6E29BB0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4B51E2C9DAA080EF89B09D51 /* MirageKit in Frameworks */,
+				010D873DA8FEDA64BC1106E1 /* SwiftTerm in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		034243554CE704B534C0BC1F /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				96D1CF627AADBF304BCDB9F3 /* AppModel.swift */,
+				AE324B50FDD58CE97A9E1C29 /* ArchiveModel.swift */,
+				5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		04F5D821E9738A35C8FCCD0A /* Archive */ = {
+			isa = PBXGroup;
+			children = (
+				26BBF700F6E96963D07F6C06 /* ArchiveWindow.swift */,
+			);
+			path = Archive;
+			sourceTree = "<group>";
+		};
+		09C1A07276FB96E5610D5309 /* Device */ = {
+			isa = PBXGroup;
+			children = (
+				A7397802AF6A76F4E5B19ED1 /* DeviceChrome.swift */,
+				0BA3A53FEBEFC4D1DDB823A4 /* DeviceStage.swift */,
+				3EE153033D9513574027A01D /* ScreenView.swift */,
+			);
+			path = Device;
+			sourceTree = "<group>";
+		};
+		0F3D5BF3D9167E80393A79EB /* Profiles */ = {
+			isa = PBXGroup;
+			children = (
+				63A8FD0502C7F9519BEA5CAF /* ProfilesWindow.swift */,
+			);
+			path = Profiles;
+			sourceTree = "<group>";
+		};
+		3E514C3C34FE85763C0BDEC4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1F1B24601B3BA9FBB7FA9EBA /* Mirage.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4C2596A7ABAEF798C6018379 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DFBE0B053EDA634D3EF481A2 /* Assets.xcassets */,
+				7BEDF02B74D6333C6030FA8B /* Info.plist */,
+				F3937192ED9C13F0E8A2250F /* Mirage-Bridging-Header.h */,
+				8E747CB77882FCB30FC30C40 /* Mirage.entitlements */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		C3B3D15D34A00777AE66C927 /* Inspector */ = {
+			isa = PBXGroup;
+			children = (
+				21ECF0E289D29B85D2540CA2 /* AppsTab.swift */,
+				21B1922BCAA70B15786085E5 /* BindingTab.swift */,
+				12E2C6E737F42510412EB521 /* InspectorView.swift */,
+			);
+			path = Inspector;
+			sourceTree = "<group>";
+		};
+		CA1F54A8C4CAA0117425397F = {
+			isa = PBXGroup;
+			children = (
+				FB3DF8D88E1F11D8D6123772 /* App */,
+				FD5E879AF466A9F9F342EACF /* Packages */,
+				3E514C3C34FE85763C0BDEC4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CE8229B144C7D1563ADD3624 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				04F5D821E9738A35C8FCCD0A /* Archive */,
+				E651D81856D760E7FE9A50B5 /* Console */,
+				09C1A07276FB96E5610D5309 /* Device */,
+				C3B3D15D34A00777AE66C927 /* Inspector */,
+				0F3D5BF3D9167E80393A79EB /* Profiles */,
+				4E8D58DAADF6C500FD0ED481 /* HubView.swift */,
+				46C47C720649EC76C7ECB2A0 /* NewDeviceSheet.swift */,
+				5D4E2ED21A166D0D0983A10D /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		E651D81856D760E7FE9A50B5 /* Console */ = {
+			isa = PBXGroup;
+			children = (
+				9C541A21E4B108F84089DB41 /* ConsolePane.swift */,
+			);
+			path = Console;
+			sourceTree = "<group>";
+		};
+		FB3DF8D88E1F11D8D6123772 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				034243554CE704B534C0BC1F /* Model */,
+				4C2596A7ABAEF798C6018379 /* Resources */,
+				CE8229B144C7D1563ADD3624 /* Views */,
+				7B64956B64905E47BE3259C3 /* MirageApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		FD5E879AF466A9F9F342EACF /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				26FF3071055E1CD166F6FFDB /* MirageKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B48E88F0AED84BCCAF04F865 /* Mirage */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FE72F8760A20C3845CB01CE3 /* Build configuration list for PBXNativeTarget "Mirage" */;
+			buildPhases = (
+				C54D4C5E1506F4D58F6BE874 /* Build AstroBox Bridge */,
+				454DA222E1FEEBC5F51C41C4 /* Sources */,
+				B357F57091F2F21E65636BD7 /* Resources */,
+				D685DA08310A8C12F6E29BB0 /* Frameworks */,
+				B8AB9CE504CD1AE0B4DACEB7 /* Bundle QEMU */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Mirage;
+			packageProductDependencies = (
+				BE87711245061830718926B6 /* MirageKit */,
+				A51CDFA7C73CBC2D36BE9E9C /* SwiftTerm */,
+			);
+			productName = Mirage;
+			productReference = 1F1B24601B3BA9FBB7FA9EBA /* Mirage.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		64BB6AA7F87D7B7DEDE3C3FE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					B48E88F0AED84BCCAF04F865 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = FA753B8BD8333853E63810A1 /* Build configuration list for PBXProject "Mirage" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = CA1F54A8C4CAA0117425397F;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E6F91CF4043D296F6216905B /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				7A072CA61B3FD1CD9D1A2C39 /* XCLocalSwiftPackageReference "Packages/MirageKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B48E88F0AED84BCCAF04F865 /* Mirage */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B357F57091F2F21E65636BD7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E0D806B9AE17654D6F5B684F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		B8AB9CE504CD1AE0B4DACEB7 /* Bundle QEMU */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle QEMU";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/bundle-qemu.sh\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME\"\n";
+		};
+		C54D4C5E1506F4D58F6BE874 /* Build AstroBox Bridge */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build AstroBox Bridge";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/build-astrobox.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		454DA222E1FEEBC5F51C41C4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DBB3EB2E63A2E0AECAB060A0 /* AppModel.swift in Sources */,
+				FC8987CAF3A13F5D4EA5D164 /* AppsTab.swift in Sources */,
+				CFE9052AEEBCD222239DD960 /* ArchiveModel.swift in Sources */,
+				78DB0EEE4783B23FF4E4F99F /* ArchiveWindow.swift in Sources */,
+				74B5F40B404A1E2275672F58 /* AstroBoxService.swift in Sources */,
+				C984976E96DE16DC11689DF2 /* BindingTab.swift in Sources */,
+				8C848AFABCD2284F2E4F38F9 /* ConsolePane.swift in Sources */,
+				27C8A7B47E0E1911DD5D98DB /* DeviceChrome.swift in Sources */,
+				51FCE73DE97612383EFDB14E /* DeviceStage.swift in Sources */,
+				F8694AC5C4C3DF5BA1CC2901 /* HubView.swift in Sources */,
+				BF2DDB1EF9CD1CC38585CD18 /* InspectorView.swift in Sources */,
+				8E68E01406EA697785B4E5D2 /* MirageApp.swift in Sources */,
+				C67AB9CF6ABF3024575CBA26 /* NewDeviceSheet.swift in Sources */,
+				C5FB29C61747D13A757904F1 /* ProfilesWindow.swift in Sources */,
+				45271FA449F5E06782A8FEFB /* ScreenView.swift in Sources */,
+				C7E2C3F0CAD8F0CC1B462D00 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		79C1EAB9F8AFBD873672F40F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Resources/Mirage.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/include";
+				INFOPLIST_FILE = App/Resources/Info.plist;
+				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/target/release";
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lmirage_astrobox",
+					"-framework CoreAudio",
+					"-framework Security",
+					"-framework IOKit",
+					"-framework IOBluetooth",
+					"-framework CoreBluetooth",
+					"-framework WebKit",
+					"-framework ApplicationServices",
+					"-framework CoreGraphics",
+					"-framework Carbon",
+					"-framework CoreVideo",
+					"-framework CoreFoundation",
+					"-framework AppKit",
+					"-liconv",
+					"-lobjc",
+					"-lc",
+					"-lm",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = moe.astralsight.mirage;
+				PRODUCT_NAME = Mirage;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MIRAGE_ASTROBOX";
+				SWIFT_OBJC_BRIDGING_HEADER = "App/Resources/Mirage-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		9D8C3F682E846E92C1216F90 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D4C2A33C80D68A03455FA199 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F892431146CEB0352DEBF2E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Resources/Mirage.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/include";
+				INFOPLIST_FILE = App/Resources/Info.plist;
+				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/target/release";
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lmirage_astrobox",
+					"-framework CoreAudio",
+					"-framework Security",
+					"-framework IOKit",
+					"-framework IOBluetooth",
+					"-framework CoreBluetooth",
+					"-framework WebKit",
+					"-framework ApplicationServices",
+					"-framework CoreGraphics",
+					"-framework Carbon",
+					"-framework CoreVideo",
+					"-framework CoreFoundation",
+					"-framework AppKit",
+					"-liconv",
+					"-lobjc",
+					"-lc",
+					"-lm",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = moe.astralsight.mirage;
+				PRODUCT_NAME = Mirage;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MIRAGE_ASTROBOX";
+				SWIFT_OBJC_BRIDGING_HEADER = "App/Resources/Mirage-Bridging-Header.h";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FA753B8BD8333853E63810A1 /* Build configuration list for PBXProject "Mirage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9D8C3F682E846E92C1216F90 /* Debug */,
+				D4C2A33C80D68A03455FA199 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FE72F8760A20C3845CB01CE3 /* Build configuration list for PBXNativeTarget "Mirage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				79C1EAB9F8AFBD873672F40F /* Debug */,
+				F892431146CEB0352DEBF2E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		7A072CA61B3FD1CD9D1A2C39 /* XCLocalSwiftPackageReference "Packages/MirageKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/MirageKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E6F91CF4043D296F6216905B /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
+			requirement = {
+				kind = exactVersion;
+				version = 1.11.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A51CDFA7C73CBC2D36BE9E9C /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6F91CF4043D296F6216905B /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+		BE87711245061830718926B6 /* MirageKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MirageKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 64BB6AA7F87D7B7DEDE3C3FE /* Project object */;
+}

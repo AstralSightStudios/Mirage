@@ -1,0 +1,76 @@
+name: Mirage
+options:
+  bundleIdPrefix: moe.astralsight
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+packages:
+  MirageKit:
+    path: Packages/MirageKit
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    exactVersion: 1.11.2
+targets:
+  Mirage:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - "**/*.md"
+    dependencies:
+      - package: MirageKit
+        product: MirageKit
+      - package: SwiftTerm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: moe.astralsight.mirage
+        PRODUCT_NAME: Mirage
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: App/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Resources/Mirage.entitlements
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+        SWIFT_OBJC_BRIDGING_HEADER: App/Resources/Mirage-Bridging-Header.h
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) MIRAGE_ASTROBOX
+        HEADER_SEARCH_PATHS: $(SRCROOT)/AstroBoxBridge/include
+        LIBRARY_SEARCH_PATHS: $(SRCROOT)/AstroBoxBridge/target/release
+        OTHER_LDFLAGS:
+          - $(inherited)
+          - -lmirage_astrobox
+          - -framework CoreAudio
+          - -framework Security
+          - -framework IOKit
+          - -framework IOBluetooth
+          - -framework CoreBluetooth
+          - -framework WebKit
+          - -framework ApplicationServices
+          - -framework CoreGraphics
+          - -framework Carbon
+          - -framework CoreVideo
+          - -framework CoreFoundation
+          - -framework AppKit
+          - -liconv
+          - -lobjc
+          - -lc
+          - -lm
+    preBuildScripts:
+      - name: Build AstroBox Bridge
+        script: |
+          "$SRCROOT/Scripts/build-astrobox.sh"
+        basedOnDependencyAnalysis: false
+    postBuildScripts:
+      - name: Bundle QEMU
+        script: |
+          "$SRCROOT/Scripts/bundle-qemu.sh" "$TARGET_BUILD_DIR/$WRAPPER_NAME"
+        basedOnDependencyAnalysis: false

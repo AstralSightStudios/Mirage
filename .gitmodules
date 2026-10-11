@@ -1,0 +1,28 @@
+[submodule "External/qemu-miwear"]
+	path = External/qemu-miwear
+	url = https://github.com/AstralSightStudios/qemu-miwear.git
+	branch = dp-1700-exp
+[submodule "External/AstroBox/modules/core"]
+	path = External/AstroBox/modules/core
+	url = https://github.com/AstralSightStudios/AstroBox-NG-Module-Core.git
+	branch = main
+[submodule "External/AstroBox/modules/bluetooth"]
+	path = External/AstroBox/modules/bluetooth
+	url = https://github.com/AstralSightStudios/AstroBox-NG-Module-Bluetooth.git
+	branch = main
+[submodule "External/AstroBox/modules/frontbridge"]
+	path = External/AstroBox/modules/frontbridge
+	url = https://github.com/AstralSightStudios/AstroBox-NG-Module-FrontBridge.git
+	branch = main
+[submodule "External/AstroBox/modules/pb"]
+	path = External/AstroBox/modules/pb
+	url = https://github.com/AstralSightStudios/AstroBox-NG-Module-Pb.git
+	branch = main
+[submodule "External/AstroBox/modules/vivo_msgpack"]
+	path = External/AstroBox/modules/vivo_msgpack
+	url = https://github.com/AstralSightStudios/AstroBox-NG-Module-Vivo-MsgPack.git
+	branch = main
+[submodule "External/AstroBox/plugins/btclassic-spp"]
+	path = External/AstroBox/plugins/btclassic-spp
+	url = https://github.com/AstralSightStudios/AstroBox-NG-Plugin-BtClassicSpp.git
+	branch = main

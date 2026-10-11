@@ -1,0 +1,20 @@
+# Xcode
+.build-xcode/
+build/
+DerivedData/
+*.xcuserstate
+project.xcworkspace/
+xcuserdata/
+
+# SwiftPM
+.build/
+Packages/*/.build/
+
+# Rust / AstroBoxBridge
+AstroBoxBridge/target/
+
+# Local scratches and caches
+.scratch/
+.DS_Store
+*.swp
+*~

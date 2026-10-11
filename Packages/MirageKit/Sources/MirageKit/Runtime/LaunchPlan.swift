@@ -1,0 +1,164 @@
+import Foundation
+
+/// Finds qemu-system-arm built from the qemu-miwear submodule.
+public enum QEMULocator {
+    public static let overrideKey = "QEMUPath"
+
+    /// Mirage's source checkout (for the submodule build), from the app's
+    /// Info.plist (`MirageSourceRoot`) or found above the executable.
+    public static var sourceRoot: URL? {
+        if let s = Bundle.main.object(forInfoDictionaryKey: "MirageSourceRoot") as? String, !s.isEmpty,
+           FileManager.default.fileExists(atPath: s + "/External/qemu-miwear") {
+            return URL(fileURLWithPath: s, isDirectory: true)
+        }
+        var dir = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent()
+        for _ in 0..<8 {
+            if FileManager.default.fileExists(atPath: dir.appendingPathComponent("External/qemu-miwear").path) {
+                return dir
+            }
+            dir.deleteLastPathComponent()
+        }
+        return nil
+    }
+
+    public struct Candidate: Identifiable, Hashable, Sendable {
+        public var id: String { url.path }
+        public var title: String
+        public var url: URL
+        public var exists: Bool
+    }
+
+    public static func candidates() -> [Candidate] {
+        var out: [Candidate] = []
+        func add(_ title: String, _ url: URL) {
+            guard !out.contains(where: { $0.url == url }) else { return }
+            out.append(.init(title: title, url: url, exists: FileManager.default.isExecutableFile(atPath: url.path)))
+        }
+        if let env = ProcessInfo.processInfo.environment["MIRAGE_QEMU"], !env.isEmpty {
+            add("MIRAGE_QEMU", URL(fileURLWithPath: env))
+        }
+        if let custom = MirageLibrary.defaults.string(forKey: overrideKey), !custom.isEmpty {
+            add("Custom", URL(fileURLWithPath: custom))
+        }
+        if let helpers = Bundle.main.privateFrameworksURL?.deletingLastPathComponent() {
+            add("Bundled with Mirage", helpers.appendingPathComponent("Helpers/qemu/bin/qemu-system-arm"))
+        }
+        if let root = sourceRoot {
+            add("Submodule build", root.appendingPathComponent("External/qemu-miwear/build/qemu-system-arm"))
+        }
+        return out
+    }
+
+    public static func locate() -> URL? {
+        candidates().first { $0.exists }?.url
+    }
+
+    /// `profile=help` of a qemu binary: the boards it knows.
+    public static func boards(of qemu: URL) -> [String] {
+        let p = Process()
+        p.executableURL = qemu
+        p.arguments = ["-M", "miwear,profile=help", "-kernel", "/dev/null", "-display", "none"]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return [] }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return String(decoding: data, as: UTF8.self).split(separator: "\n").compactMap { line in
+            let t = line.trimmingCharacters(in: .whitespaces)
+            guard !t.hasPrefix("Board"), let first = t.split(separator: " ").first else { return nil }
+            return String(first)
+        }
+    }
+
+    public static func version(of qemu: URL) -> String? {
+        let p = Process()
+        p.executableURL = qemu
+        p.arguments = ["--version"]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return nil }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return String(decoding: data, as: UTF8.self).split(separator: "\n").first.map(String.init)
+    }
+}
+
+/// Command line for one boot of a device.
+public struct LaunchPlan: Sendable {
+    public var executable: URL
+    public var arguments: [String]
+    public var workingDirectory: URL
+    public var paths: DevicePaths
+    public var bluetoothPort: Int?
+    public var shell: Bool
+    public var firmwareImage: URL
+
+    /// Aux QMP socket for tools (miragectl) while Mirage holds the main one.
+    public var auxQMPSocket: URL { paths.runtime.appendingPathComponent("qmp-aux.sock") }
+
+    public static func make(device: VirtualDevice, profile: DeviceProfile, firmware: Firmware,
+                            library: MirageLibrary, qemu: URL) throws -> LaunchPlan {
+        let paths = library.paths(for: device)
+        let fwDir = library.firmwareDirectory(firmware.id)
+        let ap = fwDir.appendingPathComponent("vela_ap.bin")
+        guard FileManager.default.fileExists(atPath: ap.path) else {
+            throw MirageError.notFound("The firmware has no vela_ap.bin")
+        }
+        var machine = "miwear,profile=\(profile.qemuBoard)"
+        let storage = DeviceStorage(library: library)
+        for img in storage.images(of: device, profile: profile) where !img.exists {
+            throw MirageError.notFound("\(img.role.title) image is missing; rebuild the device's storage")
+        }
+        if profile.storage.mainNOR { machine += ",flash-image=\(escape(paths.nor.path))" }
+        if profile.storage.sensorNORSize != nil { machine += ",sensor-nor=\(escape(paths.sensorNOR.path))" }
+        if profile.storage.nand != nil { machine += ",nand-image=\(escape(paths.nand.path))" }
+
+        var args = ["-M", machine, "-kernel", ap.path,
+                    "-name", "Mirage: \(escape(device.name))",
+                    "-display", "none",
+                    "-vnc", "unix:\(paths.vncSocket.path)",
+                    "-qmp", "unix:\(paths.qmpSocket.path),server=on,wait=off",
+                    "-qmp", "unix:\(paths.runtime.appendingPathComponent("qmp-aux.sock").path),server=on,wait=off",
+                    "-monitor", "none",
+                    "-chardev", "socket,id=con,path=\(paths.consoleSocket.path),server=on,wait=off,logfile=\(escape(paths.consoleLog.path))"]
+        for n in 0..<max(profile.uartCount, profile.consoleUART + 1) {
+            args += ["-serial", n == profile.consoleUART ? "chardev:con" : "file:\(paths.uartLog(n).path)"]
+        }
+        if let emmc = profile.storage.emmc, emmc.sizeGiB > 0 {
+            args += ["-drive", "if=sd,index=0,format=raw,file=\(escape(paths.emmc.path))"]
+        }
+        args += ["-global", "driver=bes.btss,property=bdaddr,value=\(device.identity.bluetoothAddress.uppercased())"]
+        var btPort: Int?
+        if device.options.bluetoothBridge {
+            var port = device.options.bluetoothPort
+            if port == 0 || !isLoopbackPortFree(port) { port = freeLoopbackPort() ?? 0 }
+            if port > 0 {
+                btPort = port
+                args += ["-chardev", "socket,id=bt,host=127.0.0.1,port=\(port),server=on,wait=off",
+                         "-global", "driver=bes.btss,property=chardev,value=bt"]
+            }
+        }
+        if device.options.shell {
+            args += ["-S", "-gdb", "unix:\(paths.gdbSocket.path),server=on,wait=off"]
+        }
+        args += ["-D", paths.qemuLog.path]
+        if !device.options.debugLog.isEmpty { args += ["-d", device.options.debugLog] }
+        for t in device.options.traceEvents where !t.isEmpty { args += ["-trace", t] }
+        args += device.options.extraArguments.filter { !$0.isEmpty }
+        return LaunchPlan(executable: qemu, arguments: args, workingDirectory: paths.root, paths: paths,
+                          bluetoothPort: btPort, shell: device.options.shell, firmwareImage: ap)
+    }
+
+    /// QEMU option values escape commas by doubling them.
+    static func escape(_ s: String) -> String {
+        s.replacingOccurrences(of: ",", with: ",,")
+    }
+
+    public var commandLine: String {
+        ([executable.path] + arguments).map { a in
+            a.contains(where: { " \"'$`\\".contains($0) }) ? "'" + a.replacingOccurrences(of: "'", with: "'\\''") + "'" : a
+        }.joined(separator: " ")
+    }
+}

@@ -1,0 +1,34 @@
+[package]
+name = "mirage-astrobox"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "C ABI bridge that lets Mirage drive AstroBox's core against an emulated band"
+
+[lib]
+name = "mirage_astrobox"
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[dependencies]
+corelib = { path = "../External/AstroBox/modules/core" }
+bluetooth = { path = "../External/AstroBox/modules/bluetooth" }
+pb = { path = "../External/AstroBox/modules/pb" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "fs"] }
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+anyhow = "1"
+zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
+
+# Standalone: never join a parent workspace.
+[workspace]
+
+[profile.release]
+panic = "unwind"
+
+# frontbridge (pulled in by `bluetooth`) has a Linux-only path dependency on
+# `../../vendor/tauri-runtime-cef`, which the Mirage submodule layout does not
+# carry. Point that path source at an empty stub so the graph resolves.
+[patch."file:///Volumes/EXT0/Mirage/External/AstroBox/vendor/tauri-runtime-cef"]
+tauri-runtime-cef = { path = "stubs/tauri-runtime-cef" }
