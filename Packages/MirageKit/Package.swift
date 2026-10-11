@@ -21,6 +21,7 @@ let package = Package(
         .target(
             name: "MirageKit",
             dependencies: ["CLittleFS"],
+            resources: [.copy("Resources/BindTemplate")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(

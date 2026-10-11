@@ -91,6 +91,7 @@ public struct DeviceStorage: Sendable {
                 try ImageBuilder.buildNAND(at: paths.nand, spec: nand, resource: resource,
                                            systemDir: fwDir, progress: progress)
             }
+            try BindSeed.apply(to: paths.nand, spec: nand, binding: device.binding)
         }
         if let emmc = profile.storage.emmc {
             try await runBlocking {
