@@ -35,6 +35,9 @@ final class ScreenNSView: NSView {
     private var fingerDown = false
     private var scrollPoint: CGPoint?
     private var lastFrame = 0
+    private var lastTouchPt: (x: Int, y: Int)?
+    private var lastTouchDown: Bool?
+    private var lastTouchTime: TimeInterval = 0
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -43,6 +46,7 @@ final class ScreenNSView: NSView {
         content.contentsGravity = .resize
         content.magnificationFilter = .linear
         content.minificationFilter = .trilinear
+        content.drawsAsynchronously = true
         content.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
         layer?.addSublayer(content)
     }
@@ -70,6 +74,8 @@ final class ScreenNSView: NSView {
         }
         token = nil
         content.contents = nil
+        lastTouchPt = nil
+        lastTouchDown = nil
     }
 
     private func show(_ frame: VNCClient.Frame) {
@@ -104,15 +110,34 @@ final class ScreenNSView: NSView {
         return (max(0, min(Int(panel.width) - 1, x)), max(0, min(Int(panel.height) - 1, y)))
     }
 
-    private func touch(_ pt: (Int, Int), down: Bool) {
+    private func touch(_ pt: (Int, Int), down: Bool, force: Bool = false) {
         guard let session else { return }
+        let now = CACurrentMediaTime()
+        // If button down/up changed, ALWAYS deliver immediately
+        if down != lastTouchDown {
+            lastTouchDown = down
+            lastTouchPt = pt
+            lastTouchTime = now
+            MainActor.assumeIsolated { session.touch(x: pt.0, y: pt.1, down: down) }
+            return
+        }
+        // If moving: skip duplicate coordinates
+        if pt.0 == lastTouchPt?.0 && pt.1 == lastTouchPt?.1 {
+            return
+        }
+        // Throttle movement events to ~90Hz (11ms) to never overwhelm hardware driver queues
+        if !force && (now - lastTouchTime < 0.011) {
+            return
+        }
+        lastTouchPt = pt
+        lastTouchTime = now
         MainActor.assumeIsolated { session.touch(x: pt.0, y: pt.1, down: down) }
     }
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
         fingerDown = true
-        touch(panelPoint(event), down: true)
+        touch(panelPoint(event), down: true, force: true)
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -122,20 +147,24 @@ final class ScreenNSView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         fingerDown = false
-        touch(panelPoint(event), down: false)
+        touch(panelPoint(event), down: false, force: true)
+        lastTouchPt = nil
+        lastTouchDown = nil
     }
 
     override func scrollWheel(with event: NSEvent) {
         guard event.hasPreciseScrollingDeltas, event.momentumPhase == [] else { return }
         if event.phase.contains(.began) {
             scrollPoint = convert(event.locationInWindow, from: nil)
-            if let p = scrollPoint { touch(panelPoint(p), down: true) }
+            if let p = scrollPoint { touch(panelPoint(p), down: true, force: true) }
             return
         }
         guard var p = scrollPoint else { return }
         if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
-            touch(panelPoint(p), down: false)
+            touch(panelPoint(p), down: false, force: true)
             scrollPoint = nil
+            lastTouchPt = nil
+            lastTouchDown = nil
             return
         }
         p.x += event.scrollingDeltaX

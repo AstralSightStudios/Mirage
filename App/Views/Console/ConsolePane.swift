@@ -99,28 +99,18 @@ private struct ShellBadge: View {
 /// Owns the SwiftTerm view so it survives SwiftUI updates.
 @MainActor
 final class TerminalController: NSObject, ObservableObject, TerminalViewDelegate {
-    let view: TerminalView
+    private(set) weak var activeView: TerminalView?
     weak var session: DeviceSession?
     private var token: UUID?
 
-    override init() {
-        view = TerminalView(frame: NSRect(x: 0, y: 0, width: 600, height: 240))
-        super.init()
-        view.terminalDelegate = self
-        view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        view.nativeBackgroundColor = NSColor(white: 0.08, alpha: 1)
-        view.nativeForegroundColor = NSColor(white: 0.9, alpha: 1)
-        view.caretColor = .systemGreen
-        view.optionAsMetaKey = false
-    }
-
-    func bind(_ s: DeviceSession) {
-        guard session !== s else { return }
-        if let token, let session { session.removeObserver(token) }
-        session = s
+    func attach(_ view: TerminalView, session: DeviceSession) {
+        self.activeView = view
+        guard self.session !== session else { return }
+        if let token, let s = self.session { s.removeObserver(token) }
+        self.session = session
         clear()
-        token = s.observeConsole { [weak self] data in
-            self?.view.feed(byteArray: ArraySlice([UInt8](data)))
+        token = session.observeConsole { [weak self] data in
+            self?.activeView?.feed(byteArray: ArraySlice([UInt8](data)))
         }
     }
 
@@ -128,20 +118,22 @@ final class TerminalController: NSObject, ObservableObject, TerminalViewDelegate
         if let token, let session { session.removeObserver(token) }
         token = nil
         session = nil
+        activeView = nil
     }
 
     func clear() {
-        view.feed(text: "\u{1B}c")
+        activeView?.feed(text: "\u{1B}c")
     }
 
     func copyAll() {
+        guard let view = activeView else { return }
         let text = String(decoding: view.getTerminal().getBufferAsData(), as: UTF8.self)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
     }
 
     func focus() {
-        view.window?.makeFirstResponder(view)
+        activeView?.window?.makeFirstResponder(activeView)
     }
 
     // MARK: TerminalViewDelegate
@@ -165,40 +157,28 @@ final class TerminalController: NSObject, ObservableObject, TerminalViewDelegate
     }
 }
 
-private final class TerminalContainerView: NSView {
-    var terminalView: TerminalView?
-
-    override func layout() {
-        super.layout()
-        if let terminalView {
-            terminalView.frame = NSRect(x: 6, y: 0, width: max(0, bounds.width - 6), height: max(0, bounds.height - 4))
-        }
-    }
-}
-
 private struct TerminalHost: NSViewRepresentable {
     let controller: TerminalController
     let session: DeviceSession
 
-    func makeNSView(context: Context) -> TerminalContainerView {
-        let container = TerminalContainerView()
-        container.wantsLayer = true
-        container.layer?.backgroundColor = NSColor(white: 0.08, alpha: 1).cgColor
-        controller.view.translatesAutoresizingMaskIntoConstraints = true
-        container.terminalView = controller.view
-        if controller.view.superview != container {
-            container.addSubview(controller.view)
-        }
-        controller.bind(session)
-        return container
+    func makeNSView(context: Context) -> TerminalView {
+        let view = TerminalView(frame: NSRect(x: 0, y: 0, width: 600, height: 240))
+        view.terminalDelegate = controller
+        view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        view.nativeBackgroundColor = NSColor(white: 0.08, alpha: 1)
+        view.nativeForegroundColor = NSColor(white: 0.9, alpha: 1)
+        view.caretColor = .systemGreen
+        view.optionAsMetaKey = false
+        controller.attach(view, session: session)
+        return view
     }
 
-    func updateNSView(_ nsView: TerminalContainerView, context: Context) {
-        if controller.view.superview != nsView {
-            nsView.addSubview(controller.view)
-            nsView.terminalView = controller.view
-        }
-        controller.bind(session)
+    func updateNSView(_ view: TerminalView, context: Context) {
+        controller.attach(view, session: session)
+    }
+
+    static func dismantleNSView(_ view: TerminalView, coordinator: ()) {
+        view.terminalDelegate = nil
     }
 }
 
@@ -337,40 +317,64 @@ private struct CommandPalette: View {
             .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
             .padding(8)
 
-            List {
-                Section("Common") {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("COMMON")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.top, 4)
+
                     ForEach(Self.common, id: \.0) { cmd, icon, title in
                         Button { session.run(cmd) } label: {
-                            Label {
+                            HStack(spacing: 8) {
+                                Image(systemName: icon)
+                                    .frame(width: 16)
+                                    .foregroundStyle(Color.accentColor)
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(title)
-                                    Text(cmd).font(.caption.monospaced()).foregroundStyle(.secondary)
+                                    Text(title).font(.caption.weight(.medium))
+                                    Text(cmd).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
                                 }
-                            } icon: { Image(systemName: icon) }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
-                }
-                Section {
-                    ForEach(builtins.filter { filter.isEmpty || $0.localizedCaseInsensitiveContains(filter) }, id: \.self) { b in
-                        Button { session.run(b) } label: {
-                            Text(b).font(.callout.monospaced())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
+
+                    Divider().padding(.vertical, 4)
+
                     HStack {
-                        Text("Builtins")
+                        Text("BUILTINS")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
                         Spacer()
                         if builtins.isEmpty {
                             Button("Load") { Task { builtins = await BuiltinCatalog.shared.load(for: session) } }
-                                .buttonStyle(.borderless).font(.caption)
+                                .buttonStyle(.borderless)
+                                .font(.caption2)
                         }
                     }
+                    .padding(.horizontal, 8)
+
+                    ForEach(builtins.filter { filter.isEmpty || $0.localizedCaseInsensitiveContains(filter) }, id: \.self) { b in
+                        Button { session.run(b) } label: {
+                            Text(b)
+                                .font(.system(size: 11, design: .monospaced))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
+                .padding(.vertical, 4)
             }
-            .listStyle(.sidebar)
         }
+        .background(Color(white: 0.09))
         .disabled({ if case .ready = session.shell { return false } else { return true } }())
         .task(id: session.shell) {
             if case .ready = session.shell {

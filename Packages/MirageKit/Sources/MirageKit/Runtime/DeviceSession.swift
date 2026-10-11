@@ -497,13 +497,15 @@ public final class DeviceSession {
         return out as Data
     }
 
+    private static let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
+
     public nonisolated static func cgImage(_ frame: VNCClient.Frame) -> CGImage? {
         guard frame.width > 0, frame.height > 0,
               let provider = CGDataProvider(data: frame.pixels as CFData) else { return nil }
         return CGImage(width: frame.width, height: frame.height, bitsPerComponent: 8, bitsPerPixel: 32,
-                       bytesPerRow: frame.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                       bytesPerRow: frame.width * 4, space: rgbColorSpace,
                        bitmapInfo: CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue),
-                       provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+                       provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
     }
 }
 
