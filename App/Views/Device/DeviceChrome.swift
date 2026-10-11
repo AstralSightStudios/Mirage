@@ -7,9 +7,9 @@ struct ChromeGeometry {
 
     var screen: CGSize { CGSize(width: profile.screen.width, height: profile.screen.height) }
 
-    /// Panel pixel padding for liquid glass card around the screen.
+    /// Slim, delicate panel pixel padding for the liquid glass card around the screen.
     var cardPadding: CGFloat {
-        max(20, min(screen.width, screen.height) * 0.075)
+        max(8, min(screen.width, screen.height) * 0.025)
     }
 
     /// Card size in panel pixels.
@@ -19,7 +19,7 @@ struct ChromeGeometry {
 
     /// Extra width allocated for the independent button column (in panel pixels).
     var buttonColumnWidth: CGFloat {
-        profile.buttons.isEmpty ? 0 : 130
+        profile.buttons.isEmpty ? 0 : 105
     }
 
     /// Total bounding size in panel pixels for stage fit calculation.
@@ -47,10 +47,10 @@ struct DeviceChrome<Screen: View>: View {
     var body: some View {
         let g = geo
         let screenSize = CGSize(width: g.screen.width * scale, height: g.screen.height * scale)
-        let padding = max(14, g.cardPadding * scale)
+        let padding = max(8, g.cardPadding * scale)
 
-        HStack(alignment: .center, spacing: max(12, 18 * scale)) {
-            // Liquid glass card enclosing the screen with padding
+        HStack(alignment: .center, spacing: max(12, 16 * scale)) {
+            // Liquid glass card enclosing the screen with thin padding
             glassScreenCard(screenSize: screenSize, padding: padding)
 
             // Independent vertical column of buttons
@@ -64,79 +64,102 @@ struct DeviceChrome<Screen: View>: View {
 
     @ViewBuilder
     private func glassScreenCard(screenSize: CGSize, padding: CGFloat) -> some View {
-        let cardRadius = cardCornerRadius(screenSize: screenSize, padding: padding)
-        let cardShape = RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
-
-        screenView(screenSize: screenSize)
-            .padding(padding)
-            .background {
-                ZStack {
-                    // Frosted glass material
-                    cardShape
-                        .fill(Color(white: 0.08).opacity(0.75))
-                    cardShape
-                        .fill(.ultraThinMaterial)
-                    // Specular liquid sheen
-                    cardShape
-                        .fill(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .white.opacity(0.10), location: 0.0),
-                                    .init(color: .white.opacity(0.02), location: 0.35),
-                                    .init(color: .clear, location: 0.65),
-                                    .init(color: .black.opacity(0.25), location: 1.0),
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+        if profile.screen.shape == .circle {
+            let cardDiameter = screenSize.width + padding * 2
+            ZStack {
+                // Outer liquid glass halo follows circle shape
+                Circle()
+                    .fill(Color(white: 0.08).opacity(0.72))
+                Circle()
+                    .fill(.ultraThinMaterial)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.12), location: 0.0),
+                                .init(color: .white.opacity(0.02), location: 0.35),
+                                .init(color: .clear, location: 0.65),
+                                .init(color: .black.opacity(0.20), location: 1.0),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                }
-            }
-            .overlay {
-                // Specular glass highlight rim
-                cardShape
+                    )
+                Circle()
                     .strokeBorder(
                         LinearGradient(
                             stops: [
-                                .init(color: .white.opacity(0.38), location: 0.0),
-                                .init(color: .white.opacity(0.10), location: 0.28),
-                                .init(color: .white.opacity(0.04), location: 0.72),
-                                .init(color: .white.opacity(0.24), location: 1.0),
+                                .init(color: .white.opacity(0.36), location: 0.0),
+                                .init(color: .white.opacity(0.10), location: 0.30),
+                                .init(color: .white.opacity(0.03), location: 0.70),
+                                .init(color: .white.opacity(0.22), location: 1.0),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: max(1, 1.2 * scale)
+                        lineWidth: max(0.8, 1.0 * scale)
                     )
+
+                // Screen view inside
+                screen()
+                    .frame(width: screenSize.width, height: screenSize.height)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: max(0.5, 0.8 * scale)))
+                    .shadow(color: .black.opacity(0.50), radius: 6 * scale, y: 2 * scale)
             }
-            .shadow(color: .black.opacity(0.38), radius: max(12, 24 * scale), x: 0, y: max(6, 12 * scale))
-            .shadow(color: .black.opacity(0.15), radius: max(4, 6 * scale), x: 0, y: max(2, 3 * scale))
-    }
-
-    @ViewBuilder
-    private func screenView(screenSize: CGSize) -> some View {
-        if profile.screen.shape == .circle {
-            screen()
-                .frame(width: screenSize.width, height: screenSize.height)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: max(0.5, 1 * scale)))
-                .shadow(color: .black.opacity(0.55), radius: 10 * scale, y: 4 * scale)
+            .frame(width: cardDiameter, height: cardDiameter)
+            .shadow(color: .black.opacity(0.35), radius: max(8, 16 * scale), x: 0, y: max(4, 8 * scale))
+            .shadow(color: .black.opacity(0.12), radius: max(2, 4 * scale), x: 0, y: max(1, 2 * scale))
         } else {
-            let r = profile.screen.cornerRadius * scale
-            screen()
-                .frame(width: screenSize.width, height: screenSize.height)
-                .clipShape(RoundedRectangle(cornerRadius: r, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: max(0.5, 1 * scale)))
-                .shadow(color: .black.opacity(0.55), radius: 10 * scale, y: 4 * scale)
-        }
-    }
+            // Concentric rounded rectangle follows device corner radius + padding
+            let cardRadius = (profile.screen.cornerRadius * scale) + padding
+            let cardShape = RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
+            let cardWidth = screenSize.width + padding * 2
+            let cardHeight = screenSize.height + padding * 2
 
-    private func cardCornerRadius(screenSize: CGSize, padding: CGFloat) -> CGFloat {
-        switch profile.screen.shape {
-        case .circle:
-            return max(24, (screenSize.width + padding * 2) * 0.18)
-        case .roundedRect:
-            return (profile.screen.cornerRadius * scale) + padding * 0.45
+            ZStack {
+                cardShape
+                    .fill(Color(white: 0.08).opacity(0.72))
+                cardShape
+                    .fill(.ultraThinMaterial)
+                cardShape
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.12), location: 0.0),
+                                .init(color: .white.opacity(0.02), location: 0.35),
+                                .init(color: .clear, location: 0.65),
+                                .init(color: .black.opacity(0.20), location: 1.0),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                cardShape
+                    .strokeBorder(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.36), location: 0.0),
+                                .init(color: .white.opacity(0.10), location: 0.30),
+                                .init(color: .white.opacity(0.03), location: 0.70),
+                                .init(color: .white.opacity(0.22), location: 1.0),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: max(0.8, 1.0 * scale)
+                    )
+
+                let r = profile.screen.cornerRadius * scale
+                screen()
+                    .frame(width: screenSize.width, height: screenSize.height)
+                    .clipShape(RoundedRectangle(cornerRadius: r, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Color.white.opacity(0.14), lineWidth: max(0.5, 0.8 * scale)))
+                    .shadow(color: .black.opacity(0.50), radius: 6 * scale, y: 2 * scale)
+            }
+            .frame(width: cardWidth, height: cardHeight)
+            .shadow(color: .black.opacity(0.35), radius: max(8, 16 * scale), x: 0, y: max(4, 8 * scale))
+            .shadow(color: .black.opacity(0.12), radius: max(2, 4 * scale), x: 0, y: max(1, 2 * scale))
         }
     }
 }

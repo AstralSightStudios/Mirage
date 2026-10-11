@@ -143,6 +143,27 @@ public struct LaunchPlan: Sendable {
         if device.options.shell {
             args += ["-S", "-gdb", "unix:\(paths.gdbSocket.path),server=on,wait=off"]
         }
+        // Keymaps directory for VNC so QEMU never fails with missing 'en-us' keymap
+        let qemuDir = qemu.deletingLastPathComponent()
+        let bundleResources = qemuDir.deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Resources/qemu", isDirectory: true)
+
+        let candidateDirs = [
+            bundleResources,
+            qemuDir.deletingLastPathComponent().appendingPathComponent("share/qemu", isDirectory: true),
+            qemuDir.appendingPathComponent("share/qemu", isDirectory: true),
+            qemuDir.deletingLastPathComponent().appendingPathComponent("pc-bios", isDirectory: true),
+            qemuDir.appendingPathComponent("pc-bios", isDirectory: true),
+            library.root.deletingLastPathComponent().appendingPathComponent("External/qemu-miwear/pc-bios", isDirectory: true)
+        ]
+        for dir in candidateDirs {
+            if FileManager.default.fileExists(atPath: dir.appendingPathComponent("keymaps/en-us").path) {
+                args += ["-L", dir.path]
+                break
+            }
+        }
         args += ["-D", paths.qemuLog.path]
         if !device.options.debugLog.isEmpty { args += ["-d", device.options.debugLog] }
         for t in device.options.traceEvents where !t.isEmpty { args += ["-trace", t] }

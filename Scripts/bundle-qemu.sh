@@ -1,7 +1,7 @@
 #!/bin/sh
 # Copy qemu-system-arm and the non-system libraries it loads into
 # Mirage.app/Contents/Helpers/qemu, rewriting install names to @rpath so the
-# app runs without Homebrew. Skipped when QEMU has not been built.
+# app runs without Homebrew. Data files go to Contents/Resources/qemu.
 # usage: Scripts/bundle-qemu.sh <path to Mirage.app>
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -13,6 +13,19 @@ if [ ! -x "$QEMU" ]; then
 fi
 DEST=$APP/Contents/Helpers/qemu
 mkdir -p "$DEST/bin" "$DEST/lib"
+
+# Clean any legacy share directory from Helpers (codesign treats Helpers as Mach-O code)
+rm -rf "$DEST/share"
+
+# Copy keymaps to Resources/qemu so QEMU VNC finds en-us and other layouts
+RES=$APP/Contents/Resources/qemu
+mkdir -p "$RES"
+KEYMAPS_SRC=$ROOT/External/qemu-miwear/pc-bios/keymaps
+if [ -d "$KEYMAPS_SRC" ]; then
+    rm -rf "$RES/keymaps"
+    cp -Rf "$KEYMAPS_SRC" "$RES/"
+fi
+
 set +e
 if [ "$DEST/bin/qemu-system-arm" -nt "$QEMU" ] 2>/dev/null; then
     exit 0

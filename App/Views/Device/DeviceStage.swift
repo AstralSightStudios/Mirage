@@ -9,14 +9,20 @@ final class ScaleBox {
 }
 
 enum ZoomMode: Equatable {
+    case natural
     case fit
     /// Points per panel pixel.
     case scale(CGFloat)
 
     func resolve(fit: CGFloat) -> CGFloat {
         switch self {
-        case .fit: return fit
-        case .scale(let s): return s
+        case .natural:
+            // Compact comfortable scale: ~0.55x, capped so it never dominates the stage
+            return max(0.28, min(0.55, fit * 0.60))
+        case .fit:
+            return fit
+        case .scale(let s):
+            return s
         }
     }
 }
@@ -28,6 +34,7 @@ struct DeviceStage: View {
     let device: VirtualDevice
     @Binding var zoom: ZoomMode
     let scaleBox: ScaleBox
+    @State private var gestureScale: CGFloat = 1.0
 
     var body: some View {
         if let profile = model.profile(device.profileID) {
@@ -36,20 +43,39 @@ struct DeviceStage: View {
                 let geo = ChromeGeometry(profile: profile)
                 let fit = max(0.2, min((proxy.size.width - 48) / geo.total.width,
                                        (proxy.size.height - 150) / geo.total.height))
-                let scale = zoom.resolve(fit: fit)
-                ScrollView([.horizontal, .vertical]) {
-                    VStack(spacing: 14) {
-                        DeviceChrome(profile: profile, scale: scale, onButton: { button, down in
-                            Task { await session.button(button.qcode, down: down) }
-                        }) {
-                            ScreenContent(device: device, profile: profile, session: session)
+                let baseScale = zoom.resolve(fit: fit)
+                let scale = max(0.2, min(3.5, baseScale * gestureScale))
+
+                ZStack(alignment: .bottomTrailing) {
+                    ScrollView([.horizontal, .vertical]) {
+                        VStack(spacing: 14) {
+                            DeviceChrome(profile: profile, scale: scale, onButton: { button, down in
+                                Task { await session.button(button.qcode, down: down) }
+                            }) {
+                                ScreenContent(device: device, profile: profile, session: session)
+                            }
+                            Caption(device: device, profile: profile, session: session)
                         }
-                        Caption(device: device, profile: profile, session: session)
+                        .padding(.vertical, 24)
+                        .frame(minWidth: proxy.size.width, minHeight: proxy.size.height)
                     }
-                    .padding(.vertical, 20)
-                    .frame(minWidth: proxy.size.width, minHeight: proxy.size.height)
+                    .scrollIndicators(zoom == .natural ? .never : .automatic)
+                    .simultaneousGesture(
+                        MagnifyGesture()
+                            .onChanged { val in
+                                gestureScale = val.magnification
+                            }
+                            .onEnded { val in
+                                let finalScale = max(0.2, min(3.5, baseScale * val.magnification))
+                                zoom = .scale(finalScale)
+                                gestureScale = 1.0
+                            }
+                    )
+
+                    // Floating stage zoom controls
+                    StageZoomControls(scale: scale, zoom: $zoom)
+                        .padding(16)
                 }
-                .scrollIndicators(zoom == .fit ? .never : .automatic)
                 .onAppear { scaleBox.fit = fit }
                 .onChange(of: fit) { _, f in scaleBox.fit = f }
             }
@@ -58,6 +84,74 @@ struct DeviceStage: View {
                                    systemImage: "questionmark.square.dashed",
                                    description: Text("“\(device.profileID)” is not in Device Profiles."))
         }
+    }
+}
+
+private struct StageZoomControls: View {
+    let scale: CGFloat
+    @Binding var zoom: ZoomMode
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button {
+                zoom = .scale(max(0.2, scale / 1.2))
+            } label: {
+                Image(systemName: "minus")
+                    .font(.caption2.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .help("Zoom Out")
+
+            Text("\(Int(round(scale * 100)))%")
+                .font(.caption2.monospacedDigit().weight(.medium))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 34)
+
+            Button {
+                zoom = .scale(min(3.5, scale * 1.2))
+            } label: {
+                Image(systemName: "plus")
+                    .font(.caption2.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .help("Zoom In")
+
+            Divider().frame(height: 10)
+
+            Button {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                    zoom = .natural
+                }
+            } label: {
+                Text("Compact")
+                    .font(.caption2.weight(zoom == .natural ? .bold : .regular))
+                    .foregroundStyle(zoom == .natural ? Color.accentColor : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Compact Default Size")
+
+            Button {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                    zoom = .fit
+                }
+            } label: {
+                Text("Fit")
+                    .font(.caption2.weight(zoom == .fit ? .bold : .regular))
+                    .foregroundStyle(zoom == .fit ? Color.accentColor : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Fit to Stage")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background {
+            Capsule()
+                .fill(Color(white: 0.12).opacity(0.85))
+                .overlay {
+                    Capsule().strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.06)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+                }
+        }
+        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
     }
 }
 

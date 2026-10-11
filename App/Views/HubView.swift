@@ -9,7 +9,7 @@ struct HubView: View {
     @SceneStorage("inspector") private var showInspector = true
     @SceneStorage("console") private var showConsole = false
     @SceneStorage("inspectorTab") private var inspectorTab: InspectorTab = .info
-    @State private var zoom: ZoomMode = .fit
+    @State private var zoom: ZoomMode = .natural
     @State private var scaleBox = ScaleBox()
     @AppStorage("consoleHeight") private var consoleHeight: Double = 280
     @State private var showSettings = false

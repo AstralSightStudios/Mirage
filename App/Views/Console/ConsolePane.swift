@@ -165,27 +165,39 @@ final class TerminalController: NSObject, ObservableObject, TerminalViewDelegate
     }
 }
 
+private final class TerminalContainerView: NSView {
+    var terminalView: TerminalView?
+
+    override func layout() {
+        super.layout()
+        if let terminalView {
+            terminalView.frame = NSRect(x: 6, y: 0, width: max(0, bounds.width - 6), height: max(0, bounds.height - 4))
+        }
+    }
+}
+
 private struct TerminalHost: NSViewRepresentable {
     let controller: TerminalController
     let session: DeviceSession
 
-    func makeNSView(context: Context) -> NSView {
-        let container = NSView()
-        controller.view.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(controller.view)
-        NSLayoutConstraint.activate([
-            controller.view.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 6),
-            controller.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            controller.view.topAnchor.constraint(equalTo: container.topAnchor, constant: 4),
-            controller.view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
+    func makeNSView(context: Context) -> TerminalContainerView {
+        let container = TerminalContainerView()
         container.wantsLayer = true
         container.layer?.backgroundColor = NSColor(white: 0.08, alpha: 1).cgColor
+        controller.view.translatesAutoresizingMaskIntoConstraints = true
+        container.terminalView = controller.view
+        if controller.view.superview != container {
+            container.addSubview(controller.view)
+        }
         controller.bind(session)
         return container
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {
+    func updateNSView(_ nsView: TerminalContainerView, context: Context) {
+        if controller.view.superview != nsView {
+            nsView.addSubview(controller.view)
+            nsView.terminalView = controller.view
+        }
         controller.bind(session)
     }
 }
@@ -307,40 +319,58 @@ private struct CommandPalette: View {
     ]
 
     var body: some View {
-        List {
-            Section("Common") {
-                ForEach(Self.common, id: \.0) { cmd, icon, title in
-                    Button { session.run(cmd) } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(title)
-                                Text(cmd).font(.caption.monospaced()).foregroundStyle(.secondary)
-                            }
-                        } icon: { Image(systemName: icon) }
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary).font(.caption)
+                TextField("Filter commands…", text: $filter)
+                    .textFieldStyle(.plain)
+                    .font(.caption)
+                if !filter.isEmpty {
+                    Button { filter = "" } label: {
+                        Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            Section {
-                ForEach(builtins.filter { filter.isEmpty || $0.localizedCaseInsensitiveContains(filter) }, id: \.self) { b in
-                    Button { session.run(b) } label: {
-                        Text(b).font(.callout.monospaced())
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+            .padding(8)
+
+            List {
+                Section("Common") {
+                    ForEach(Self.common, id: \.0) { cmd, icon, title in
+                        Button { session.run(cmd) } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(title)
+                                    Text(cmd).font(.caption.monospaced()).foregroundStyle(.secondary)
+                                }
+                            } icon: { Image(systemName: icon) }
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
-            } header: {
-                HStack {
-                    Text("Builtins")
-                    Spacer()
-                    if builtins.isEmpty {
-                        Button("Load") { Task { builtins = await BuiltinCatalog.shared.load(for: session) } }
-                            .buttonStyle(.borderless).font(.caption)
+                Section {
+                    ForEach(builtins.filter { filter.isEmpty || $0.localizedCaseInsensitiveContains(filter) }, id: \.self) { b in
+                        Button { session.run(b) } label: {
+                            Text(b).font(.callout.monospaced())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    HStack {
+                        Text("Builtins")
+                        Spacer()
+                        if builtins.isEmpty {
+                            Button("Load") { Task { builtins = await BuiltinCatalog.shared.load(for: session) } }
+                                .buttonStyle(.borderless).font(.caption)
+                        }
                     }
                 }
             }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
-        .searchable(text: $filter, placement: .sidebar, prompt: "Filter")
         .disabled({ if case .ready = session.shell { return false } else { return true } }())
         .task(id: session.shell) {
             if case .ready = session.shell {
