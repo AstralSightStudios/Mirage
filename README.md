@@ -134,4 +134,4 @@ Mirage/
 
 ## 📄 许可证
 
-Mirage 项目遵循 MIT 许可证。引用的 QEMU 与 LittleFS 遵循各自的开源许可证（GPL-2.0 / BSD-3-Clause）。
+Mirage 项目遵循 AGPL-v3 许可证。引用的 QEMU 与 LittleFS 遵循各自的开源许可证（GPL-2.0 / BSD-3-Clause）。
