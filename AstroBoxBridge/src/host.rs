@@ -51,9 +51,9 @@ pub fn init(cb: Option<MabCallback>, ctx: *mut c_void) {
             .expect("failed to start the tokio runtime");
         let _ = RUNTIME.set(rt);
 
-        // AstroBox's ECS world lives on its own thread; start it once.
+        // the companion core's ECS world lives on its own thread; start it once.
         corelib::ecs::init_runtime_default();
-        log::info!(target: "mirage", "mirage-astrobox {} ready", env!("CARGO_PKG_VERSION"));
+        log::info!(target: "mirage", "mirage companion core {} ready", env!("CARGO_PKG_VERSION"));
     });
 }
 

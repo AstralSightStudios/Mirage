@@ -1,4 +1,4 @@
-//! Connection lifecycle: emulator bridge → Bluetooth link → AstroBox device.
+//! Connection lifecycle: emulator bridge → Bluetooth link → companion core device.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
@@ -61,7 +61,7 @@ struct Session {
 struct Link {
     state: ConnState,
     device: Option<DeviceSummary>,
-    /// AstroBox device id (the band's Bluetooth address) while one exists.
+    /// companion core device id (the band's Bluetooth address) while one exists.
     addr: Option<String>,
     session: Option<Arc<Session>>,
     generation: u64,
@@ -246,7 +246,7 @@ async fn connect_inner(
         .unwrap_or_else(|| "Xiaomi Band".to_string());
     log::info!(target: "mirage", "Bluetooth link up with {name} ({addr})");
 
-    // 4. route the band's bytes into AstroBox and authenticate
+    // 4. route the band's bytes into the companion core and authenticate
     let rt = tokio::runtime::Handle::current();
     let generation = session.generation;
     let rx_addr = addr.clone();
@@ -444,7 +444,7 @@ pub async fn disconnect() -> Result<Value, String> {
     Ok(Value::Null)
 }
 
-/// Drop the AstroBox device and the bridge; ends in `disconnected`.
+/// Drop the companion core device and the bridge; ends in `disconnected`.
 /// Callers hold `OP`.
 async fn teardown(reason: Option<String>) {
     let addr = {

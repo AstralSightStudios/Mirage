@@ -19,7 +19,7 @@ use crate::{host, link::connected_addr};
 
 const LIST_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Run `f` against one of the band's AstroBox systems on the ECS thread.
+/// Run `f` against one of the band's companion core systems on the ECS thread.
 async fn with_system<S, R>(addr: &str, f: impl FnOnce(&mut S) -> R + Send + 'static) -> Result<R, String>
 where
     S: corelib::ecs::Component,
@@ -59,7 +59,7 @@ pub struct InstallParams {
     #[serde(default)]
     package_name: Option<String>,
     /// Watchfaces only: install under this id instead of the one in the file
-    /// (AstroBox rewrites the id inside the package).
+    /// (the companion core rewrites the id inside the package).
     #[serde(default)]
     watchface_id: Option<String>,
 }
@@ -89,7 +89,7 @@ fn read_rpk_manifest(data: &[u8]) -> Result<QuickAppManifest, String> {
 }
 
 /// A .mwz archive installs as the watchface .bin inside it (root entry first),
-/// as AstroBox does.
+/// as the companion core does.
 fn extract_watchface_bin(data: &[u8]) -> Option<Vec<u8>> {
     let mut zip = zip::ZipArchive::new(Cursor::new(data)).ok()?;
     let mut root = None;
@@ -110,7 +110,7 @@ fn extract_watchface_bin(data: &[u8]) -> Option<Vec<u8>> {
     Some(buf)
 }
 
-/// AstroBox refuses ids with this prefix ("表盘已损坏").
+/// The companion core refuses ids with this prefix ("表盘已损坏").
 const DAMAGED_WATCHFACE_ID_PREFIX: &str = "1209";
 
 pub async fn install(id: u64, p: InstallParams) -> Result<Value, String> {
@@ -234,7 +234,7 @@ pub async fn watchfaces() -> Result<Value, String> {
             id: w.id,
             name: w.name,
             current: w.is_current,
-            // absent means removable, as in AstroBox's UI
+            // absent means removable, as in the companion core's UI
             can_remove: w.can_remove.unwrap_or(true),
             can_edit: w.can_edit,
             version_code: w.version_code,

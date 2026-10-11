@@ -3,7 +3,7 @@ name = "mirage-astrobox"
 version = "0.1.0"
 edition = "2024"
 publish = false
-description = "C ABI bridge that lets Mirage drive AstroBox's core against an emulated band"
+description = "C ABI bridge that lets Mirage drive the companion core against an emulated band"
 
 [lib]
 name = "mirage_astrobox"

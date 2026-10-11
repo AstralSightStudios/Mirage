@@ -286,14 +286,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Build AstroBox Bridge";
+			name = "Build Companion Core";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/Scripts/build-astrobox.sh\"\n";
+			shellScript = "\"$SRCROOT/Scripts/build-companion-core.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

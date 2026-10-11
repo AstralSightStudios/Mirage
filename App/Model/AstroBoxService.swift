@@ -2,7 +2,7 @@ import Foundation
 import MirageKit
 import Observation
 
-/// AstroBox core, linked in as a Rust static library (AstroBoxBridge/),
+/// The companion core, linked in as a Rust static library (AstroBoxBridge/),
 /// talking to the emulated band over its Bluetooth bridge: device info,
 /// watchfaces and quick apps without a phone.
 ///
@@ -75,7 +75,7 @@ final class AstroBoxService {
 
     private func call(_ method: String, _ params: [String: Any] = [:], onStart: ((UInt64) -> Void)? = nil) async throws -> Any {
         guard AstroBoxFFI.available else {
-            throw MirageError.process("This Mirage build doesn’t include the companion core (build it with make astrobox).")
+            throw MirageError.process("This Mirage build doesn’t include the companion core (build it with Scripts/build-companion-core.sh).")
         }
         let data = try JSONSerialization.data(withJSONObject: params)
         let json = String(decoding: data, as: UTF8.self)

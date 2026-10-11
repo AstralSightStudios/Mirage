@@ -1,4 +1,4 @@
-//! Mirage ⇄ AstroBox bridge.
+//! Mirage ⇄ companion core bridge.
 //!
 //! A tiny in-process JSON-RPC over a C ABI (see `include/mirage_astrobox.h`):
 //! `mab_call` queues a request and returns its id; every request completes

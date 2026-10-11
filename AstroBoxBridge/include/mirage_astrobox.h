@@ -1,5 +1,5 @@
 /*
- * mirage_astrobox.h — Mirage ⇄ AstroBox core bridge (libmirage_astrobox.a)
+ * mirage_astrobox.h — Mirage ⇄ companion core bridge (libmirage_astrobox.a)
  *
  * An in-process JSON-RPC. Requests go in through mab_call(); results and
  * events come back as JSON text through the single callback given to
@@ -12,7 +12,7 @@
  *   {"type":"result","id":N,"ok":false,"error":"<message>"}
  *       exactly one per request id
  *   {"type":"log","level":"info|warn|error|debug","target":"...","message":"..."}
- *       AstroBox/bridge logs; debug level when env MIRAGE_AB_DEBUG is set
+ *       companion core logs; debug level when env MIRAGE_AB_DEBUG is set
  *   {"type":"progress","id":N,"progress":0.0..1.0,"message":"..."}
  *       install progress for request N
  *   {"type":"state","state":"disconnected|attaching|connecting|connected","device":{...}|null}
@@ -59,7 +59,7 @@ extern "C" {
 
 typedef void (*mab_callback)(const char *json, void *ctx);
 
-/* Start the bridge: tokio runtime, AstroBox core, log forwarding.
+/* Start the bridge: tokio runtime, companion core, log forwarding.
  * Idempotent; a later call only replaces the callback/context. */
 void mab_init(mab_callback cb, void *ctx);
 

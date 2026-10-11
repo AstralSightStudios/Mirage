@@ -18,7 +18,7 @@ struct AppsTab: View {
         VStack(alignment: .leading, spacing: 0) {
             if !ab.isAvailable {
                 Unavailable(icon: "shippingbox", title: "Companion core not built",
-                            text: "Build it with `make astrobox`, then rebuild Mirage, to manage watchfaces and quick apps.")
+                            text: "Build it with Scripts/build-companion-core.sh, then rebuild Mirage, to manage watchfaces and quick apps.")
             } else if !device.binding.bound {
                 Unavailable(icon: "link.badge.plus", title: "Device not bound",
                             text: "The companion core connects to bound devices. Turn on “Bound to a phone” in Binding.")
