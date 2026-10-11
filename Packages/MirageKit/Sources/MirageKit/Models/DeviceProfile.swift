@@ -366,5 +366,29 @@ public extension DeviceProfile {
         notes: "Panel 212x520, CST9217M touch, SPI NAND (yaffs /system + /data). No physical buttons. Corner radius is estimated.",
         builtin: true)
 
-    static let builtins: [DeviceProfile] = [.p67, .q63, .q66, .n66, .o66]
+    /// Xiaomi Smart Band 9 Pro: board "n67" (best1503). The panel size is the
+    /// firmware's own choice for its rm690c0 driver; the corner radius is estimated.
+    static let n67 = DeviceProfile(
+        id: "n67",
+        name: "Xiaomi Smart Band 9 Pro",
+        family: .band,
+        chip: "best1503",
+        qemuBoard: "n67",
+        productPrefixes: ["miwear.watch.n67"],
+        screen: .init(width: 336, height: 480, shape: .roundedRect, cornerRadius: 40),
+        buttons: [],
+        storage: .init(
+            mainNOR: true,
+            nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
+                        resourceImage: "", resourceFirstPage: 0, resourcePages: 0,
+                        systemPages: 57600),
+            factory: .init(flash: .mainNOR, offset: 16368 * 512, blockSize: 8192,
+                           blockCount: 1, ioSize: 512, diskVersion: 0, format: .rawInfo)),
+        consoleUART: 2,
+        defaults: .init(didPrefix: "150", psnPrefix: "QEMU1506"),
+        accent: "#FF9F0A",
+        notes: "Panel 336x480 (rm690c0 driver), Hynitron CST92xx touch on I2C5, W1150 light sensor on I2C5, SPI NAND (yaffs /system + /data). No physical buttons.",
+        builtin: true)
+
+    static let builtins: [DeviceProfile] = [.p67, .q63, .q66, .n66, .o66, .n67]
 }

@@ -648,6 +648,7 @@ enum Yaffs2 {
     /// lists but does not contain are skipped.
     static func systemFiles(in dir: URL) throws -> [File] {
         let manifest = dir.appendingPathComponent("ota.json")
+        guard FileManager.default.fileExists(atPath: manifest.path) else { return [] }
         let data = try Data(contentsOf: manifest)
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let sections = json["sections"] as? [[String: Any]] else {
@@ -660,9 +661,6 @@ enum Yaffs2 {
             guard FileManager.default.fileExists(atPath: url.path) else { continue }
             let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
             files.append(File(name: name, url: url, size: size))
-        }
-        guard !files.isEmpty else {
-            throw MirageError.invalid("The package has no resource files for /system")
         }
         return files
     }
