@@ -34,7 +34,7 @@ public struct DeviceStorage: Sendable {
                 switch self {
                 case .mainNOR: return "BL2, factory and parameter partitions; the AP firmware is installed on every boot"
                 case .sensorNOR: return "Sensor hub flash: its firmware is installed on every boot, /misc keeps the factory data"
-                case .nand: return "resource romfs, /data (yaffs), coredump and nand_nv"
+                case .nand: return "system (romfs or yaffs), /data (yaffs), coredump and nand_nv"
                 case .emmc: return "GPT: firmware romfs partitions, nv, data and userlog (exFAT)"
                 }
             }
@@ -86,10 +86,10 @@ public struct DeviceStorage: Sendable {
 
         if let nand = profile.storage.nand {
             let res = fwDir.appendingPathComponent(nand.resourceImage)
+            let resource = !nand.resourceImage.isEmpty && FileManager.default.fileExists(atPath: res.path) ? res : nil
             try await runBlocking {
-                try ImageBuilder.buildNAND(at: paths.nand, spec: nand,
-                                           resource: FileManager.default.fileExists(atPath: res.path) ? res : nil,
-                                           progress: progress)
+                try ImageBuilder.buildNAND(at: paths.nand, spec: nand, resource: resource,
+                                           systemDir: fwDir, progress: progress)
             }
         }
         if let emmc = profile.storage.emmc {
@@ -138,9 +138,15 @@ public struct DeviceStorage: Sendable {
         let fwDir = library.firmwareDirectory(firmware.id)
         var kept = true
         if let nand = profile.storage.nand, FileManager.default.fileExists(atPath: paths.nand.path) {
-            let res = fwDir.appendingPathComponent(nand.resourceImage)
-            try await runBlocking {
-                try ImageBuilder.updateNANDResource(at: paths.nand, spec: nand, resource: res, progress: progress)
+            if nand.systemPages != nil {
+                try await runBlocking {
+                    try ImageBuilder.updateSystemNAND(at: paths.nand, spec: nand, systemDir: fwDir, progress: progress)
+                }
+            } else {
+                let res = fwDir.appendingPathComponent(nand.resourceImage)
+                try await runBlocking {
+                    try ImageBuilder.updateNANDResource(at: paths.nand, spec: nand, resource: res, progress: progress)
+                }
             }
         }
         if let emmc = profile.storage.emmc, FileManager.default.fileExists(atPath: paths.emmc.path) {

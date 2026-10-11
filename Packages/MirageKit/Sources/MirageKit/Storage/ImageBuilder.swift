@@ -48,10 +48,12 @@ public enum ImageBuilder {
         props.map { "\($0.key)=\($0.value)\n" }.joined()
     }
 
-    /// A formatted littlefs partition holding /factory.prop and its
-    /// /factory.prop.bkup copy (the factory line writes both; the property
-    /// service restores one from the other).
+    /// The factory partition's bytes: a littlefs with /factory.prop, or the
+    /// raw factory record for Band 9 / Band 10.
     public static func factoryPartition(_ part: FactoryPartition, properties: [FactoryIdentity.Property]) throws -> Data {
+        if part.isRawInfo {
+            return try RawInfo.partition(part, properties: properties)
+        }
         let text = Data(factoryText(properties).utf8)
         var image = Data(count: part.size)
         var geo = geometry(part)
@@ -93,6 +95,9 @@ public enum ImageBuilder {
         guard let region = try fh.read(upToCount: part.size), region.count == part.size else {
             throw MirageError.io("\(nor.lastPathComponent) is too small for the factory partition")
         }
+        if part.isRawInfo {
+            return try RawInfo.properties(in: region)
+        }
         var geo = geometry(part)
         var out = [UInt8](repeating: 0, count: 64 << 10)
         let n = region.withUnsafeBytes { img in
@@ -120,7 +125,16 @@ public enum ImageBuilder {
 
     /// Page-major SPI NAND image (page data, then OOB, per page; erased =
     /// 0xFF) with the resource romfs at the start of the resource partition.
-    public static func buildNAND(at url: URL, spec: NANDSpec, resource: URL?, progress: Progress? = nil) throws {
+    public static func buildNAND(at url: URL, spec: NANDSpec, resource: URL?, systemDir: URL? = nil,
+                                 progress: Progress? = nil) throws {
+        if let systemPages = spec.systemPages {
+            guard let systemDir else {
+                throw MirageError.invalid("The /system partition needs the firmware package's files")
+            }
+            try buildSystemNAND(at: url, spec: spec, systemPages: systemPages,
+                                files: try Yaffs2.systemFiles(in: systemDir), progress: progress)
+            return
+        }
         let tmp = url.appendingPathExtension("tmp")
         FileManager.default.createFile(atPath: tmp.path, contents: nil)
         let out = try FileHandle(forWritingTo: tmp)
@@ -169,6 +183,89 @@ public enum ImageBuilder {
         try out.close()
         try replace(url, with: tmp)
         progress?(1, "NAND ready")
+    }
+
+    /// Writes the yaffs2 /system partition at page 0 and erases the rest of
+    /// the image, the way a freshly formatted device has it.
+    static func buildSystemNAND(at url: URL, spec: NANDSpec, systemPages: Int,
+                                files: [Yaffs2.File], progress: Progress?) throws {
+        let need = try Yaffs2.pageCount(files)
+        guard need <= systemPages else {
+            throw MirageError.invalid("/system needs \(need) pages, the partition has \(systemPages)")
+        }
+        let tmp = url.appendingPathExtension("tmp")
+        FileManager.default.createFile(atPath: tmp.path, contents: nil)
+        let out = try FileHandle(forWritingTo: tmp)
+        defer { try? out.close() }
+        let oob = Data(repeating: 0xFF, count: spec.oobSize)
+        let erasedPage = Data(repeating: 0xFF, count: spec.pageSize) + oob
+        let totalPages = spec.blocks * spec.pagesPerBlock
+        var pending = Data()
+        pending.reserveCapacity(chunk + erasedPage.count)
+        try Yaffs2.forEachPage(files) { page in
+            pending.append(page)
+            pending.append(oob)
+            if pending.count >= chunk {
+                try out.write(contentsOf: pending)
+                pending.removeAll(keepingCapacity: true)
+            }
+        }
+        for p in need..<totalPages {
+            if p % 4096 == 0 {
+                try Task.checkCancellation()
+                progress?(Double(p) / Double(totalPages), "Writing NAND")
+            }
+            pending.append(erasedPage)
+            if pending.count >= chunk {
+                try out.write(contentsOf: pending)
+                pending.removeAll(keepingCapacity: true)
+            }
+        }
+        try out.write(contentsOf: pending)
+        try out.close()
+        try replace(url, with: tmp)
+        progress?(1, "NAND ready")
+    }
+
+    /// Rewrites the /system partition of an existing NAND image on a firmware
+    /// change. The partition is erased first so no page of the old tree is
+    /// left behind; /data is not touched.
+    public static func updateSystemNAND(at url: URL, spec: NANDSpec, systemDir: URL, progress: Progress? = nil) throws {
+        guard let systemPages = spec.systemPages else {
+            throw MirageError.invalid("This NAND layout has no yaffs /system partition")
+        }
+        let files = try Yaffs2.systemFiles(in: systemDir)
+        let need = try Yaffs2.pageCount(files)
+        guard need <= systemPages else {
+            throw MirageError.invalid("/system needs \(need) pages, the partition has \(systemPages)")
+        }
+        let fh = try FileHandle(forUpdating: url)
+        defer { try? fh.close() }
+        let oob = Data(repeating: 0xFF, count: spec.oobSize)
+        let erasedPage = Data(repeating: 0xFF, count: spec.pageSize) + oob
+        try fh.seek(toOffset: 0)
+        var pending = Data()
+        try Yaffs2.forEachPage(files) { page in
+            pending.append(page)
+            pending.append(oob)
+            if pending.count >= chunk {
+                try fh.write(contentsOf: pending)
+                pending.removeAll(keepingCapacity: true)
+            }
+        }
+        for p in need..<systemPages {
+            if p % 4096 == 0 {
+                try Task.checkCancellation()
+                progress?(Double(p) / Double(systemPages), "Updating /system")
+            }
+            pending.append(erasedPage)
+            if pending.count >= chunk {
+                try fh.write(contentsOf: pending)
+                pending.removeAll(keepingCapacity: true)
+            }
+        }
+        try fh.write(contentsOf: pending)
+        progress?(1, "/system updated")
     }
 
     /// Rewrites only the resource partition of an existing NAND image (a
@@ -441,4 +538,184 @@ extension Data {
     func u16(_ off: Int) -> UInt16 {
         withUnsafeBytes { $0.loadUnaligned(fromByteOffset: off, as: UInt16.self).littleEndian }
     }
+}
+
+// MARK: - Raw factory record (Band 9, Band 10)
+
+/// The factory record the Band 9 and Band 10 firmware reads from
+/// /dev/factory instead of a littlefs. Offsets are the ones its
+/// CheckInfoContent and loadfactoryinfo_main functions use on the record
+/// (the firmware reads 1292 bytes): magic at 0, a CRC at 4, then
+/// fixed-width fields. The CRC covers bytes 12 ..< 1291 and is a reflected
+/// CRC-32 with initial value 0 and no final XOR (found by matching the
+/// value the firmware logs, crc32=0x5ad2ce5f, for a record it rejected).
+/// Fields Mirage does not know are left empty. Binding keys have no field
+/// here, so they cannot be stored.
+enum RawInfo {
+    static let size = 1292
+    static let magic: UInt16 = 0x9A55
+    static let crcOffset = 4
+    static let bodyOffset = 12
+    static let bodyEnd = 1291
+    static let mac = (offset: 0x8A, length: 6)
+    static let did = (offset: 0x92, length: 9)
+    static let psn = (offset: 0x14F, length: 24)
+
+    static func partition(_ part: FactoryPartition, properties: [FactoryIdentity.Property]) throws -> Data {
+        func value(_ key: String) -> String? { properties.first { $0.key == key }?.value }
+        guard let did = value("ro.factory.did"), !did.isEmpty, did.allSatisfy(\.isNumber),
+              did.utf8.count <= RawInfo.did.length else {
+            throw MirageError.invalid("The raw factory record holds a device ID of at most \(RawInfo.did.length) decimal digits")
+        }
+        guard let psn = value("ro.factory.psn"), (1...RawInfo.psn.length).contains(psn.utf8.count) else {
+            throw MirageError.invalid("The raw factory record holds a serial of 1–\(RawInfo.psn.length) characters")
+        }
+        guard let mac = value("ro.factory.mac_bt"), FactoryIdentity.isValidAddress(mac) else {
+            throw MirageError.invalid("The raw factory record needs a Bluetooth address (XX:XX:XX:XX:XX:XX)")
+        }
+        var record = Data(repeating: 0xFF, count: max(size, part.size))
+        func put(_ bytes: [UInt8], at field: (offset: Int, length: Int)) {
+            let padded = bytes + [UInt8](repeating: 0, count: field.length - bytes.count)
+            record.replaceSubrange(field.offset..<(field.offset + field.length), with: padded)
+        }
+        put(Array(mac.split(separator: ":").compactMap { UInt8($0, radix: 16) }), at: RawInfo.mac)
+        put(Array(did.utf8), at: RawInfo.did)
+        put(Array(psn.utf8), at: RawInfo.psn)
+        record.replaceSubrange(0..<2, with: withUnsafeBytes(of: magic.littleEndian) { Data($0) })
+        let crc = crcZeroInit(record.subdata(in: bodyOffset..<bodyEnd))
+        record.replaceSubrange(crcOffset..<(crcOffset + 4), with: ImageBuilder.le32(crc))
+        return record
+    }
+
+    /// Reflected CRC-32 polynomial 0xEDB88320, initial value 0, no final XOR.
+    static func crcZeroInit(_ data: Data) -> UInt32 {
+        var c: UInt32 = 0
+        for byte in data {
+            c ^= UInt32(byte)
+            for _ in 0..<8 {
+                c = c & 1 != 0 ? (c >> 1) ^ 0xEDB8_8320 : c >> 1
+            }
+        }
+        return c
+    }
+
+    static func properties(in region: Data) throws -> [FactoryIdentity.Property] {
+        let magicValue = UInt16(region[0]) | UInt16(region[1]) << 8
+        guard magicValue == magic else {
+            throw MirageError.io("No factory record in the partition")
+        }
+        func text(_ field: (offset: Int, length: Int)) -> String {
+            let bytes = region.subdata(in: field.offset..<(field.offset + field.length)).prefix { $0 != 0 }
+            return String(decoding: bytes, as: UTF8.self)
+        }
+        let macBytes = region.subdata(in: mac.offset..<(mac.offset + mac.length))
+        let macText = macBytes.map { String(format: "%02X", $0) }.joined(separator: ":")
+        return [
+            .init(key: "ro.factory.did", value: text(did)),
+            .init(key: "ro.factory.psn", value: text(psn)),
+            .init(key: "ro.factory.mac_bt", value: macText),
+        ]
+    }
+}
+
+// MARK: - yaffs2 /system (Band 9, Band 10)
+
+/// The yaffs2 tree the Band 9 and Band 10 firmware mounts as /system
+/// (`mount -t yaffs -o ro /dev/nand_system /system`). Each package
+/// resource file becomes one file at the root, in ota.json order. Written
+/// the way the firmware writes it: 2048-byte chunks with inband tags
+/// (the last 16 bytes: seq, obj id, chunk id, bytes), 64 chunks per block.
+/// Matches emu/mknand.py.
+enum Yaffs2 {
+    struct File {
+        var name: String
+        var url: URL
+        var size: Int
+    }
+
+    static let chunkData = 2048 - 16
+    static let firstSeq: UInt32 = 0x1001
+    static let firstObj: UInt32 = 257
+    static let root: UInt32 = 1
+    static let typeFile: UInt32 = 1
+    static let extraHeader: UInt32 = 0x8000_0000
+    static let typeShift: UInt32 = 28
+    static let fileMode: UInt32 = 0o644
+    static let time: UInt32 = 946_684_800       // 2000-01-01, the files' times
+    static let chunksPerBlock = 64
+
+    /// The package's main_res files, in ota.json order. Files the package
+    /// lists but does not contain are skipped.
+    static func systemFiles(in dir: URL) throws -> [File] {
+        let manifest = dir.appendingPathComponent("ota.json")
+        let data = try Data(contentsOf: manifest)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let sections = json["sections"] as? [[String: Any]] else {
+            throw MirageError.invalid("\(manifest.lastPathComponent) lists no sections")
+        }
+        var files: [File] = []
+        for sec in sections where sec["section_type"] as? String == "main_res" {
+            guard let name = sec["location_path"] as? String else { continue }
+            let url = dir.appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+            files.append(File(name: name, url: url, size: size))
+        }
+        guard !files.isEmpty else {
+            throw MirageError.invalid("The package has no resource files for /system")
+        }
+        return files
+    }
+
+    /// Pages the tree occupies: one header chunk plus data chunks per file.
+    static func pageCount(_ files: [File]) throws -> Int {
+        files.reduce(0) { $0 + 1 + ($1.size + chunkData - 1) / chunkData }
+    }
+
+    /// Calls `emit` with each 2048-byte page (chunk data, then its tags).
+    static func forEachPage(_ files: [File], _ emit: (Data) throws -> Void) throws {
+        var index = 0
+        func page(oid: UInt32, cid: UInt32, nbytes: UInt32, data: Data) throws {
+            var out = data
+            out.append(Data(repeating: 0xFF, count: chunkData - data.count))
+            let seq = firstSeq + UInt32(index / chunksPerBlock)
+            out.append(contentsOf: [seq, oid, cid, nbytes].flatMap { le32($0) })
+            try emit(out)
+            index += 1
+        }
+        for (i, file) in files.enumerated() {
+            let oid = firstObj + UInt32(i)
+            try page(oid: oid | (typeFile << typeShift), cid: extraHeader | root,
+                     nbytes: UInt32(truncatingIfNeeded: file.size), data: header(name: file.name, size: file.size))
+            let handle = try FileHandle(forReadingFrom: file.url)
+            defer { try? handle.close() }
+            var cid: UInt32 = 1
+            while let data = try handle.read(upToCount: chunkData), !data.isEmpty {
+                try page(oid: oid, cid: cid, nbytes: UInt32(data.count), data: data)
+                cid += 1
+            }
+        }
+    }
+
+    /// The file header chunk: type, parent, name, mode and times, size, and
+    /// the fields the firmware expects; unused bytes are 0xFF.
+    static func header(name: String, size: Int) -> Data {
+        var h = Data(repeating: 0xFF, count: chunkData)
+        func put32(_ v: UInt32, at off: Int) { h.replaceSubrange(off..<(off + 4), with: le32(v)) }
+        put32(typeFile, at: 0)
+        put32(root, at: 4)
+        let raw = Array(name.utf8.prefix(255))
+        h.replaceSubrange(10..<266, with: raw + [UInt8](repeating: 0, count: 256 - raw.count))
+        for (i, v) in [fileMode, 0, 0, time, time, time].enumerated() { put32(v, at: 268 + 4 * i) }
+        put32(UInt32(truncatingIfNeeded: size), at: 292)
+        put32(0xFFFF_FFFF, at: 296)
+        for (i, v) in [0, time, 0, time, 0, time, 0].enumerated() { put32(UInt32(v), at: 460 + 4 * i) }
+        put32(0, at: 488)
+        put32(UInt32(truncatingIfNeeded: size >> 32), at: 496)
+        put32(0, at: 504)
+        put32(0, at: 508)
+        return h
+    }
+
+    static func le32(_ v: UInt32) -> [UInt8] { withUnsafeBytes(of: v.littleEndian) { Array($0) } }
 }

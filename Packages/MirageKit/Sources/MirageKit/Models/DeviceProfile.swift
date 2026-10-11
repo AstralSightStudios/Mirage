@@ -160,9 +160,20 @@ public struct FactoryPartition: Codable, Hashable, Sendable {
     public var nameMax: Int
     /// littlefs on-disk version, 0x00020000 = 2.0.
     public var diskVersion: UInt32
+    /// How the factory data is stored; nil means littlefs.
+    public var format: Format?
+
+    public enum Format: String, Codable, Sendable {
+        /// A littlefs filesystem holding /factory.prop (best1503 Band 10 Pro, Band 11).
+        case littlefs
+        /// The fixed-layout factory record the Band 9 and Band 10 firmware
+        /// reads from /dev/factory: magic 0x9A55, CRC32 of the body, then
+        /// the device fields at fixed offsets (see ImageBuilder.rawInfo).
+        case rawInfo
+    }
 
     public init(flash: Flash, offset: Int, blockSize: Int, blockCount: Int, ioSize: Int,
-                nameMax: Int = 32, diskVersion: UInt32) {
+                nameMax: Int = 32, diskVersion: UInt32, format: Format? = nil) {
         self.flash = flash
         self.offset = offset
         self.blockSize = blockSize
@@ -170,9 +181,11 @@ public struct FactoryPartition: Codable, Hashable, Sendable {
         self.ioSize = ioSize
         self.nameMax = nameMax
         self.diskVersion = diskVersion
+        self.format = format
     }
 
     public var size: Int { blockSize * blockCount }
+    public var isRawInfo: Bool { format == .rawInfo }
 }
 
 public struct NANDSpec: Codable, Hashable, Sendable {
@@ -184,9 +197,14 @@ public struct NANDSpec: Codable, Hashable, Sendable {
     public var resourceImage: String
     public var resourceFirstPage: Int
     public var resourcePages: Int
+    /// Size in pages of a yaffs2 /system partition at page 0 that is built
+    /// from the package's main_res files (Band 9 / Band 10). nil means the
+    /// resource romfs above is used instead.
+    public var systemPages: Int?
 
     public init(pageSize: Int, oobSize: Int, pagesPerBlock: Int, blocks: Int,
-                resourceImage: String, resourceFirstPage: Int, resourcePages: Int) {
+                resourceImage: String, resourceFirstPage: Int, resourcePages: Int,
+                systemPages: Int? = nil) {
         self.pageSize = pageSize
         self.oobSize = oobSize
         self.pagesPerBlock = pagesPerBlock
@@ -194,6 +212,7 @@ public struct NANDSpec: Codable, Hashable, Sendable {
         self.resourceImage = resourceImage
         self.resourceFirstPage = resourceFirstPage
         self.resourcePages = resourcePages
+        self.systemPages = systemPages
     }
 
     public var imageSize: Int { (pageSize + oobSize) * pagesPerBlock * blocks }
@@ -277,5 +296,75 @@ public extension DeviceProfile {
         notes: "466x466 round AMOLED, Raydium touch, eMMC (GPT), crown = HOME, side button = DOWN.",
         builtin: true)
 
-    static let builtins: [DeviceProfile] = [.p67, .q63]
+    /// Xiaomi Smart Band 11: board "q66" (best1503), 212x520 panel.
+    static let q66 = DeviceProfile(
+        id: "q66",
+        name: "Xiaomi Smart Band 11",
+        family: .band,
+        chip: "best1503",
+        qemuBoard: "q66",
+        productPrefixes: ["miwear.watch.q66"],
+        screen: .init(width: 212, height: 520, shape: .roundedRect, cornerRadius: 40),
+        buttons: [],
+        storage: .init(
+            mainNOR: true,
+            nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
+                        resourceImage: "vela_resource.bin", resourceFirstPage: 0,
+                        resourcePages: 65536),
+            factory: .init(flash: .mainNOR, offset: 32256 * 512, blockSize: 8192,
+                           blockCount: 16, ioSize: 512, diskVersion: 0x0002_0001)),
+        consoleUART: 2,
+        defaults: .init(didPrefix: "150", psnPrefix: "QEMU1503"),
+        accent: "#5AC8FA",
+        notes: "Panel 212x520, CST92xx touch, SPI NAND (resource romfs + /data). No physical buttons. Corner radius is estimated.",
+        builtin: true)
+
+    /// Xiaomi Smart Band 9: board "n66" (best1503), 192x490 panel. The
+    /// firmware mounts /system from a yaffs2 partition built from its package.
+    static let n66 = DeviceProfile(
+        id: "n66",
+        name: "Xiaomi Smart Band 9",
+        family: .band,
+        chip: "best1503",
+        qemuBoard: "n66",
+        productPrefixes: ["miwear.watch.n66"],
+        screen: .init(width: 192, height: 490, shape: .roundedRect, cornerRadius: 36),
+        buttons: [],
+        storage: .init(
+            mainNOR: true,
+            nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
+                        resourceImage: "", resourceFirstPage: 0, resourcePages: 0,
+                        systemPages: 65536),
+            factory: .init(flash: .mainNOR, offset: 16368 * 512, blockSize: 8192,
+                           blockCount: 1, ioSize: 512, diskVersion: 0, format: .rawInfo)),
+        consoleUART: 2,
+        defaults: .init(didPrefix: "150", psnPrefix: "QEMU1503"),
+        accent: "#34C759",
+        notes: "Panel 192x490, Hynitron CST92xx touch, SPI NAND (yaffs /system + /data). No physical buttons. Corner radius is estimated.",
+        builtin: true)
+
+    /// Xiaomi Smart Band 10: board "o66" (best1503), 212x520 panel.
+    static let o66 = DeviceProfile(
+        id: "o66",
+        name: "Xiaomi Smart Band 10",
+        family: .band,
+        chip: "best1503",
+        qemuBoard: "o66",
+        productPrefixes: ["miwear.watch.o66"],
+        screen: .init(width: 212, height: 520, shape: .roundedRect, cornerRadius: 40),
+        buttons: [],
+        storage: .init(
+            mainNOR: true,
+            nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
+                        resourceImage: "", resourceFirstPage: 0, resourcePages: 0,
+                        systemPages: 65536),
+            factory: .init(flash: .mainNOR, offset: 16368 * 512, blockSize: 8192,
+                           blockCount: 1, ioSize: 512, diskVersion: 0, format: .rawInfo)),
+        consoleUART: 2,
+        defaults: .init(didPrefix: "150", psnPrefix: "QEMU1503"),
+        accent: "#FF9F0A",
+        notes: "Panel 212x520, CST9217M touch, SPI NAND (yaffs /system + /data). No physical buttons. Corner radius is estimated.",
+        builtin: true)
+
+    static let builtins: [DeviceProfile] = [.p67, .q63, .q66, .n66, .o66]
 }

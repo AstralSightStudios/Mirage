@@ -14,9 +14,23 @@ public struct FirmwareImporter: Sendable {
         case archive(tag: String, asset: String, notes: String?)
     }
 
-    /// Files of a package that are worth keeping.
-    static func keep(_ name: String) -> Bool {
-        (name.hasPrefix("vela_") && name.hasSuffix(".bin")) || name == "ota.sh" || name == "META-INF"
+    /// Files of a package that are worth keeping: the vela images, the
+    /// update scripts, and the package's main_res files. Band 9 and Band 10
+    /// build their /system partition from main_res (ota.json names them).
+    static func keptNames(in root: URL) -> Set<String> {
+        var names: Set<String> = ["ota.json", "ota.sh", "META-INF"]
+        let manifest = root.appendingPathComponent("ota.json")
+        if let data = try? Data(contentsOf: manifest),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let sections = json["sections"] as? [[String: Any]] {
+            for sec in sections where sec["section_type"] as? String == "main_res" {
+                if let name = sec["location_path"] as? String { names.insert(name) }
+            }
+        }
+        if let all = try? FileManager.default.contentsOfDirectory(atPath: root.path) {
+            for name in all where name.hasPrefix("vela_") && name.hasSuffix(".bin") { names.insert(name) }
+        }
+        return names
     }
 
     @discardableResult
@@ -34,7 +48,8 @@ public struct FirmwareImporter: Sendable {
         if isDir.boolValue {
             let root = try Self.findPackageRoot(in: source)
             progress?(0, "Copying firmware images")
-            let names = try FileManager.default.contentsOfDirectory(atPath: root.path).filter(Self.keep)
+            let kept = Self.keptNames(in: root)
+            let names = try FileManager.default.contentsOfDirectory(atPath: root.path).filter { kept.contains($0) }
             for (i, name) in names.enumerated() {
                 try Task.checkCancellation()
                 // APFS clones the files when source and library share a volume
@@ -64,8 +79,9 @@ public struct FirmwareImporter: Sendable {
             try FileManager.default.removeItem(at: dest)
         }
         var images: [String: Int64] = [:]
+        let kept = Self.keptNames(in: packageRoot)
         for name in try FileManager.default.contentsOfDirectory(atPath: packageRoot.path) {
-            guard Self.keep(name) else {
+            guard kept.contains(name) else {
                 try? FileManager.default.removeItem(at: packageRoot.appendingPathComponent(name))
                 continue
             }

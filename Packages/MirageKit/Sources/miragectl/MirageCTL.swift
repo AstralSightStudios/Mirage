@@ -112,7 +112,7 @@ func run() async throws {
     let library = try MirageLibrary.shared()
     let rest = argv.dropFirst()
     let args = Args(rest, valued: ["firmware", "profile", "authkey", "hold", "size", "part", "did", "psn", "mac",
-                                   "prop", "resource", "timeout"])
+                                   "prop", "resource", "system", "timeout"])
 
     func device(_ i: Int = 0) -> VirtualDevice {
         guard args.positional.count > i else { fail("missing DEVICE") }
@@ -366,6 +366,11 @@ func run() async throws {
         print()
 
     case "image":
+        func profileArg(_ args: Args) -> DeviceProfile {
+            guard let id = args.value("profile") else { return DeviceProfile.p67 }
+            guard let p = DeviceProfile.builtins.first(where: { $0.id == id }) else { fail("unknown profile \(id)") }
+            return p
+        }
         let sub = args.positional.first ?? ""
         let pos = Array(args.positional.dropFirst())
         switch sub {
@@ -373,7 +378,7 @@ func run() async throws {
             guard let out = pos.first, let size = args.value("size").flatMap({ Int($0.hasPrefix("0x") ? String($0.dropFirst(2)) : $0, radix: $0.hasPrefix("0x") ? 16 : 10) }) else {
                 fail("image nor OUT --size BYTES --part main|sensor")
             }
-            let part = args.value("part") == "sensor" ? DeviceProfile.q63.storage.factory : DeviceProfile.p67.storage.factory
+            let part = args.value("part") == "sensor" ? DeviceProfile.q63.storage.factory : profileArg(args).storage.factory
             let url = URL(fileURLWithPath: out)
             try ImageBuilder.createErasedNOR(at: url, size: size)
             var props: [FactoryIdentity.Property] = [
@@ -389,10 +394,13 @@ func run() async throws {
             try ImageBuilder.writeFactory(into: url, part: part, properties: props)
             print("\(out): factory.prop at 0x\(String(part.offset, radix: 16))")
         case "nand":
-            guard let out = pos.first, let res = args.value("resource") else { fail("image nand OUT --resource FILE") }
+            guard let out = pos.first else { fail("image nand OUT [--profile ID] (--resource FILE | --system DIR)") }
+            let profile = profileArg(args)
+            guard let spec = profile.storage.nand else { fail("\(profile.id) has no NAND") }
             let p = ProgressLine()
-            try ImageBuilder.buildNAND(at: URL(fileURLWithPath: out), spec: DeviceProfile.p67.storage.nand!,
-                                       resource: URL(fileURLWithPath: res)) { p.update($0, $1) }
+            try ImageBuilder.buildNAND(at: URL(fileURLWithPath: out), spec: spec,
+                                       resource: args.value("resource").map { URL(fileURLWithPath: $0) },
+                                       systemDir: args.value("system").map { URL(fileURLWithPath: $0) }) { p.update($0, $1) }
             p.done()
         case "emmc":
             guard pos.count >= 2 else { fail("image emmc OUT FIRMWARE_DIR") }

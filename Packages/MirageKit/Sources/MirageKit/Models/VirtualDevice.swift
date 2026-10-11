@@ -137,16 +137,27 @@ public struct BindInfo: Codable, Hashable, Sendable {
         guard !userID.isEmpty else { throw MirageError.invalid("User ID must not be empty") }
     }
 
-    /// The persist.miwear_* properties that make the band consider itself
-    /// bound.
+    /// The host (AstroBox) address the band considers its bonded companion:
+    /// the emulated Bluetooth bridge's local address.
+    public static let companionAddress = "C0:FF:EE:00:00:01"
+
+    /// The persist.* properties that make the band consider itself bound.
+    /// The token keys alone are not enough: without the bonded state the
+    /// firmware logs "token read but no bonded" and rejects the account
+    /// (account error 4). The companion MAC is the host's BD_ADDR with its
+    /// octets reversed, as 12 lowercase hex digits.
     public var properties: [FactoryIdentity.Property] {
         guard bound else { return [] }
+        let companion = BindInfo.companionAddress.split(separator: ":").reversed().joined().lowercased()
         return [
             .init(key: "persist.miwear_token_key", value: authKey.lowercased()),
             .init(key: "persist.miwear_user_id", value: userID),
             .init(key: "persist.miwear_beacon_key", value: beaconKey.lowercased()),
             .init(key: "persist.miwear_ir_key", value: irKey.lowercased()),
             .init(key: "persist.miwear_seqnum", value: seqnum),
+            .init(key: "persist.setup_wizard", value: "1"),
+            .init(key: "persist.miwear_companion_device_type", value: "0"),
+            .init(key: "persist.miwear_companion_device_mac", value: companion),
         ]
     }
 }
