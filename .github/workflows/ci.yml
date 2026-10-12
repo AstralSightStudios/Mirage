@@ -106,19 +106,36 @@ jobs:
       - name: Build Mirage (GTK)
         run: swift build --product Mirage
 
+  # the shipped macOS app: native SwiftUI (Mirage.xcodeproj), QEMU bundled
   macos:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
-      - name: Check out the AstroBox modules
-        run: git submodule update --init --depth 1 External/AstroBox/modules/core External/AstroBox/modules/bluetooth External/AstroBox/modules/frontbridge External/AstroBox/modules/pb External/AstroBox/modules/vivo_msgpack External/AstroBox/plugins/btclassic-spp
-      - name: Install GTK 4
-        run: brew install gtk4
-      - name: Companion core
-        run: Scripts/build-companion-core.sh
+      - name: Check out the submodules
+        run: |
+          git submodule update --init --depth 1 External/qemu-miwear External/AstroBox/modules/core External/AstroBox/modules/bluetooth External/AstroBox/modules/frontbridge External/AstroBox/modules/pb External/AstroBox/modules/vivo_msgpack External/AstroBox/plugins/btclassic-spp
+      - name: Select the newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
+      - name: QEMU dependencies
+        run: brew install glib pixman meson ninja pkgconf
+      - name: Build QEMU
+        run: Scripts/build-qemu.sh
       - name: MirageKit tests
         run: swift test --package-path Packages/MirageKit
-      - name: Build the GTK preview of the Windows/Linux UI
-        run: swift build --product Mirage
+      - name: Build Mirage.app
+        run: |
+          xcodebuild -project Mirage.xcodeproj -scheme Mirage -configuration Release \
+            -derivedDataPath .build/xcode -destination 'generic/platform=macOS' \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= build
+      - name: Package
+        run: |
+          mkdir -p dist
+          ditto -c -k --keepParent .build/xcode/Build/Products/Release/Mirage.app dist/Mirage-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mirage-macOS
+          path: dist/Mirage-macOS.zip

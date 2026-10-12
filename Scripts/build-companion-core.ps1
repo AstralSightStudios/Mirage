@@ -21,7 +21,8 @@ try {
     # libraries (windows.0.48.5.lib, windows.0.52.0.lib, ...); put them next to
     # it so the Swift link (-L AstroBoxBridge\target\release) finds them.
     $out = Join-Path $bridge 'target\release'
-    $metadata = cargo metadata --format-version 1 | ConvertFrom-Json
+    # -AsHashtable: the metadata has keys that differ only in case (USB / usb)
+    $metadata = cargo metadata --format-version 1 | ConvertFrom-Json -AsHashtable
     $copied = 0
     foreach ($pkg in $metadata.packages | Where-Object { $_.name -eq 'windows_x86_64_msvc' }) {
         $libDir = Join-Path (Split-Path $pkg.manifest_path) 'lib'
