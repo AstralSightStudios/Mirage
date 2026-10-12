@@ -20,6 +20,14 @@ fi
 # /usr/local may carry x86_64 Homebrew libraries that pkg-config would pick
 export PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}
 
+# Prefer Apple clang on macOS so cross-compilers in PATH (e.g. Android NDK) don't hijack host builds
+if [ "$(uname -s)" = "Darwin" ]; then
+    CC=${CC:-$(xcrun -find clang 2>/dev/null || echo "/usr/bin/clang")}
+    CXX=${CXX:-$(xcrun -find clang++ 2>/dev/null || echo "/usr/bin/clang++")}
+    OBJCC=${OBJCC:-$CC}
+    export CC CXX OBJCC
+fi
+
 mkdir -p "$BUILD"
 cd "$BUILD"
 if [ ! -f build.ninja ]; then
