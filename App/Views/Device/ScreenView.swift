@@ -153,14 +153,15 @@ final class ScreenNSView: NSView {
     }
 
     override func scrollWheel(with event: NSEvent) {
-        guard event.hasPreciseScrollingDeltas, event.momentumPhase == [] else { return }
+        guard event.hasPreciseScrollingDeltas else { return }
         if event.phase.contains(.began) {
             scrollPoint = convert(event.locationInWindow, from: nil)
             if let p = scrollPoint { touch(panelPoint(p), down: true, force: true) }
             return
         }
         guard var p = scrollPoint else { return }
-        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled) ||
+           !event.momentumPhase.isEmpty {
             touch(panelPoint(p), down: false, force: true)
             scrollPoint = nil
             lastTouchPt = nil
