@@ -33,6 +33,8 @@ let package = Package(
                 .product(name: "SwiftCrossUI", package: "swift-cross-ui"),
                 .product(name: "GtkBackend", package: "swift-cross-ui",
                          condition: .when(platforms: [.macOS, .linux])),
+                .product(name: "Gtk", package: "swift-cross-ui",
+                         condition: .when(platforms: [.macOS, .linux])),
                 .product(name: "WinUIBackend", package: "swift-cross-ui",
                          condition: .when(platforms: [.windows])),
                 .target(name: "CMirageAstroBox", condition: withCompanionCore),
