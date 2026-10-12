@@ -288,19 +288,19 @@ final class FirmwareLayout {
 
     func find(_ needle: [UInt8]) -> [Int] {
         guard !needle.isEmpty, needle.count <= bytes.count else { return [] }
-        return bytes.withUnsafeBufferPointer { d in
-            needle.withUnsafeBufferPointer { nd in
-                var out: [Int] = []
-                var from = 0
-                while from <= d.count - nd.count,
-                      let hit = memmem(d.baseAddress! + from, d.count - from, nd.baseAddress!, nd.count) {
-                    let i = d.baseAddress!.distance(to: hit.assumingMemoryBound(to: UInt8.self))
-                    out.append(i)
-                    from = i + 1
-                }
-                return out
+        // memmem 是 GNU/POSIX 扩展，Windows 上没有；这里用纯 Swift 数组扫描实现等价查找
+        var out: [Int] = []
+        var from = 0
+        let lastStart = bytes.count - needle.count
+        scan: while from <= lastStart {
+            for j in 0..<needle.count where bytes[from + j] != needle[j] {
+                from += 1
+                continue scan
             }
+            out.append(from)
+            from += 1
         }
+        return out
     }
 }
 

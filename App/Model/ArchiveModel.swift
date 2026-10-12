@@ -160,6 +160,16 @@ enum Format {
     }
 
     static func relative(_ d: Date) -> String {
-        RelativeDateTimeFormatter().localizedString(for: d, relativeTo: Date())
+        // RelativeDateTimeFormatter 在 Windows 的 corelibs-foundation 中不可用，手写等价实现
+        let seconds = Int(d.timeIntervalSinceNow)
+        let abs = Swift.abs(seconds)
+        let (value, unit): (Int, String)
+        switch abs {
+        case 0..<45:    return "just now"
+        case ..<3600:   (value, unit) = ((abs + 30) / 60, "min")
+        case ..<86400:  (value, unit) = ((abs + 1800) / 3600, "hr")
+        default:        (value, unit) = ((abs + 43200) / 86400, "day")
+        }
+        return seconds < 0 ? "\(value) \(unit) ago" : "in \(value) \(unit)"
     }
 }
