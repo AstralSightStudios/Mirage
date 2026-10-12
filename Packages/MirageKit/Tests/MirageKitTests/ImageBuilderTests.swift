@@ -36,3 +36,29 @@ import Testing
     try ImageBuilder.writeFactory(into: url, part: part, properties: props)
     #expect(try ImageBuilder.readFactory(from: url, part: part) == props)
 }
+
+@Test func yaffs2DirectoryTree() throws {
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("mirage-yaffs-\(UUID().uuidString)")
+    let sys = tmp.appendingPathComponent("system")
+    let fontDir = sys.appendingPathComponent("font")
+    try FileManager.default.createDirectory(at: fontDir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let fileData = Data("sample-font-data-for-testing".utf8)
+    try fileData.write(to: fontDir.appendingPathComponent("test.ttf"))
+
+    let files = try Yaffs2.systemFiles(in: tmp)
+    #expect(files.count == 2) // font dir + test.ttf file
+    #expect(files.contains(where: { $0.isDirectory && $0.name == "font" }))
+    #expect(files.contains(where: { !$0.isDirectory && $0.name == "test.ttf" }))
+
+    let pages = try Yaffs2.pageCount(files)
+    #expect(pages == 3) // 1 for font dir header, 1 for test.ttf header, 1 for test.ttf data chunk
+
+    var emitted = 0
+    try Yaffs2.forEachPage(files) { page in
+        #expect(page.count == Yaffs2.chunkData + 16)
+        emitted += 1
+    }
+    #expect(emitted == 3)
+}

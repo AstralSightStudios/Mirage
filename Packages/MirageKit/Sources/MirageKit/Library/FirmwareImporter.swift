@@ -18,7 +18,7 @@ public struct FirmwareImporter: Sendable {
     /// update scripts, and the package's main_res files. Band 9 and Band 10
     /// build their /system partition from main_res (ota.json names them).
     static func keptNames(in root: URL) -> Set<String> {
-        var names: Set<String> = ["ota.json", "ota.sh", "META-INF"]
+        var names: Set<String> = ["ota.json", "ota.sh", "META-INF", "system"]
         let manifest = root.appendingPathComponent("ota.json")
         if let data = try? Data(contentsOf: manifest),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
