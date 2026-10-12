@@ -304,6 +304,26 @@ final class FirmwareLayout {
     }
 }
 
+#if os(Windows)
+/// The MSVC C runtime has no memmem.
+private func memmem(_ big: UnsafeRawPointer, _ bigLen: Int,
+                    _ little: UnsafeRawPointer, _ littleLen: Int) -> UnsafeMutableRawPointer? {
+    guard littleLen > 0, bigLen >= littleLen else { return nil }
+    let b = big.assumingMemoryBound(to: UInt8.self)
+    let l = little.assumingMemoryBound(to: UInt8.self)
+    var i = 0
+    while i <= bigLen - littleLen {
+        if b[i] == l[0] {
+            var j = 1
+            while j < littleLen && b[i + j] == l[j] { j += 1 }
+            if j == littleLen { return UnsafeMutableRawPointer(mutating: big + i) }
+        }
+        i += 1
+    }
+    return nil
+}
+#endif
+
 /// Minimal GDB remote serial protocol client.
 final class GDBRemote {
     let socket: StreamSocket
