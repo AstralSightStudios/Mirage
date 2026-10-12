@@ -26,10 +26,14 @@ public enum NSHInjector {
         return Plan(shMain: main, shName: name, call: call, spawn: spawn)
     }
 
-    /// Runs the injection over the gdbstub at `socketPath`; returns the
+    /// Runs the injection over the gdbstub at `path`; returns the
     /// shell's task ID.
     public static func inject(plan: Plan, gdbSocket path: String, timeout: TimeInterval = 300) async throws -> Int {
-        let sock = try await StreamSocket.connect(unix: path, timeout: 15)
+        try await inject(plan: plan, gdb: .unix(path), timeout: timeout)
+    }
+
+    public static func inject(plan: Plan, gdb endpoint: QEMUEndpoint, timeout: TimeInterval = 300) async throws -> Int {
+        let sock = try await StreamSocket.connect(endpoint, timeout: 15)
         return try await runBlocking {
             let g = GDBRemote(socket: sock)
             defer { sock.close() }

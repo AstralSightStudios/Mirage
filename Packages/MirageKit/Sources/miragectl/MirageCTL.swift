@@ -1,4 +1,8 @@
+#if canImport(Darwin)
 import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
 import Foundation
 import MirageKit
 
@@ -340,8 +344,16 @@ func run() async throws {
     case "console":
         let d = device()
         let paths = library.paths(for: d)
-        guard RuntimeRecord.live(at: paths.runtimeFile) != nil else { fail("\(d.name) is not running") }
-        let c = try await ConsoleConnection.connect(path: paths.consoleSocket.path, timeout: 3)
+        guard let record = RuntimeRecord.live(at: paths.runtimeFile) else { fail("\(d.name) is not running") }
+        let c = try await ConsoleConnection.connect(record.endpoints(paths).console, timeout: 3)
+        #if os(Windows)
+        // no raw console mode here: whole lines go to NSH, end of input quits
+        print("connected to \(d.name), Ctrl-Z Enter quits")
+        c.start(onData: { FileHandle.standardOutput.write($0) }, onClose: { exit(0) })
+        while let line = readLine(strippingNewline: true) {
+            c.send(Data((line + "\r").utf8))
+        }
+        #else
         var old = termios()
         tcgetattr(0, &old)
         var raw = old
@@ -364,6 +376,7 @@ func run() async throws {
         }
         tcsetattr(0, TCSANOW, &old)
         print()
+        #endif
 
     case "image":
         func profileArg(_ args: Args) -> DeviceProfile {

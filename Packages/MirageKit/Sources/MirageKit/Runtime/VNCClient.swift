@@ -36,7 +36,11 @@ public final class VNCClient: @unchecked Sendable {
     }
 
     public static func connect(path: String, timeout: TimeInterval = 15) async throws -> VNCClient {
-        let s = try await StreamSocket.connect(unix: path, timeout: timeout)
+        try await connect(.unix(path), timeout: timeout)
+    }
+
+    public static func connect(_ endpoint: QEMUEndpoint, timeout: TimeInterval = 15) async throws -> VNCClient {
+        let s = try await StreamSocket.connect(endpoint, timeout: timeout)
         let c = VNCClient(socket: s)
         try await runBlocking { try c.handshake() }
         return c

@@ -36,7 +36,12 @@ public final class MirageLibrary: @unchecked Sendable {
     }
 
     public static var defaultRoot: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        #if os(Windows)
+        if let local = ProcessInfo.processInfo.environment["LOCALAPPDATA"], !local.isEmpty {
+            return URL(fileURLWithPath: local, isDirectory: true).appendingPathComponent("Mirage", isDirectory: true)
+        }
+        #endif
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Mirage", isDirectory: true)
     }
 

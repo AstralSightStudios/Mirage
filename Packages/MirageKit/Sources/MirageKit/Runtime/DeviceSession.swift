@@ -1,9 +1,10 @@
-import CoreGraphics
-import Darwin
 import Foundation
-import ImageIO
 import Observation
+#if canImport(CoreGraphics)
+import CoreGraphics
+import ImageIO
 import UniformTypeIdentifiers
+#endif
 
 /// A running (or startable) emulator for one device: the QEMU process and
 /// its QMP, VNC, console and gdbstub connections.
@@ -60,7 +61,8 @@ public final class DeviceSession {
     @ObservationIgnored private var vnc: VNCClient?
     @ObservationIgnored private var console: ConsoleConnection?
     @ObservationIgnored private var process: Process?
-    @ObservationIgnored private var exitSource: DispatchSourceProcess?
+    @ObservationIgnored private var exitWatch: HostProcess.ExitWatch?
+    @ObservationIgnored private var endpoints: DeviceEndpoints?
     @ObservationIgnored private var bootTask: Task<Void, Never>?
     @ObservationIgnored public private(set) var consoleHistory = ByteRing(capacity: 2 << 20)
     @ObservationIgnored private var consoleObservers: [UUID: (Data) -> Void] = [:]
@@ -152,8 +154,8 @@ public final class DeviceSession {
             } else {
                 state = .running
             }
-            await attachConsole(plan.paths)
-            await attachScreen(plan.paths)
+            await attachConsole(plan.endpoints)
+            await attachScreen(plan.endpoints)
         } catch {
             lastError = error.localizedDescription
             if let p = process, p.isRunning { p.terminate() }
@@ -181,7 +183,7 @@ public final class DeviceSession {
     private func connectQMP(_ plan: LaunchPlan) async throws -> QMPClient {
         let deadline = Date().addingTimeInterval(20)
         while true {
-            if let q = try? await QMPClient.connect(path: plan.paths.qmpSocket.path, timeout: 0.2) { return q }
+            if let q = try? await QMPClient.connect(plan.endpoints.qmp, timeout: 0.2) { return q }
             if process?.isRunning != true {
                 try? await Task.sleep(nanoseconds: 200_000_000)
                 let out = (try? String(contentsOf: plan.paths.stdoutLog, encoding: .utf8)) ?? ""
@@ -226,24 +228,21 @@ public final class DeviceSession {
         startedAt = Date()
         bluetoothPort = plan.bluetoothPort
         commandLine = plan.commandLine
+        endpoints = plan.endpoints
         watchExit(pid: p.processIdentifier)
         let record = RuntimeRecord(pid: p.processIdentifier, qemu: plan.executable.path, startedAt: Date(),
-                                   bluetoothPort: plan.bluetoothPort, shell: plan.shell, commandLine: plan.commandLine)
+                                   bluetoothPort: plan.bluetoothPort, shell: plan.shell, commandLine: plan.commandLine,
+                                   endpoints: plan.endpoints)
         try? record.write(to: plan.paths.runtimeFile)
     }
 
     private func watchExit(pid: Int32) {
-        let src = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
-        src.setEventHandler { [weak self] in
-            MainActor.assumeIsolated { self?.processExited() }
-        }
-        src.resume()
-        exitSource = src
+        exitWatch = HostProcess.watchExit(pid) { [weak self] in self?.processExited() }
     }
 
     private func processExited() {
-        exitSource?.cancel()
-        exitSource = nil
+        exitWatch?.cancel()
+        exitWatch = nil
         if let p = process {
             p.waitUntilExit()
             exitStatus = p.terminationStatus
@@ -267,6 +266,7 @@ public final class DeviceSession {
         console = nil
         process = nil
         pid = nil
+        endpoints = nil
         consoleConnected = false
         if let device {
             let paths = library.paths(for: device)
@@ -286,16 +286,16 @@ public final class DeviceSession {
         if let qmp {
             _ = try? await qmp.execute("quit")
         } else {
-            kill(pid, SIGTERM)
+            HostProcess.terminate(pid)
         }
         for _ in 0..<100 where self.pid == pid {
             try? await Task.sleep(nanoseconds: 100_000_000)
-            if kill(pid, 0) != 0 { break }
+            if !HostProcess.isAlive(pid) { break }
         }
-        if kill(pid, 0) == 0 {
-            kill(pid, SIGTERM)
+        if HostProcess.isAlive(pid) {
+            HostProcess.terminate(pid)
             try? await Task.sleep(nanoseconds: 3_000_000_000)
-            if kill(pid, 0) == 0 { kill(pid, SIGKILL) }
+            if HostProcess.isAlive(pid) { HostProcess.forceKill(pid) }
         }
         if process == nil && self.pid == pid {
             // attached session: no Process to report the exit
@@ -306,7 +306,7 @@ public final class DeviceSession {
     public func forceQuit() {
         guard let pid else { return }
         userStopped = true
-        kill(pid, SIGKILL)
+        HostProcess.forceKill(pid)
         if process == nil { teardown() }
     }
 
@@ -335,7 +335,7 @@ public final class DeviceSession {
         guard state == .stopped, let device else { return false }
         let paths = library.paths(for: device)
         guard let record = RuntimeRecord.read(from: paths.runtimeFile) else { return false }
-        guard kill(record.pid, 0) == 0, processPath(record.pid)?.contains("qemu") == true else {
+        guard HostProcess.isAlive(record.pid), processPath(record.pid)?.contains("qemu") == true else {
             try? FileManager.default.removeItem(at: paths.runtimeFile)
             return false
         }
@@ -346,17 +346,19 @@ public final class DeviceSession {
         shell = record.shell ? .unavailable : .disabled
         if let sp = record.shellPID { shell = .ready(pid: sp) }
         state = .running
+        let endpoints = record.endpoints(paths)
+        self.endpoints = endpoints
         watchExit(pid: record.pid)
-        var q = try? await QMPClient.connect(path: paths.qmpSocket.path, timeout: 1)
+        var q = try? await QMPClient.connect(endpoints.qmp, timeout: 1)
         if q == nil {
-            q = try? await QMPClient.connect(path: paths.runtime.appendingPathComponent("qmp-aux.sock").path, timeout: 1)
+            q = try? await QMPClient.connect(endpoints.qmpAux, timeout: 1)
         }
         if let q {
             adoptQMP(q)
             if let s = try? await q.status(), !s.running { state = s.status == "paused" ? .paused : .running }
         }
-        await attachConsole(paths)
-        await attachScreen(paths)
+        await attachConsole(endpoints)
+        await attachScreen(endpoints)
         return true
     }
 
@@ -376,7 +378,7 @@ public final class DeviceSession {
 
     private func injectShell(_ nsh: NSHInjector.Plan, plan: LaunchPlan) async {
         do {
-            let pid = try await NSHInjector.inject(plan: nsh, gdbSocket: plan.paths.gdbSocket.path)
+            let pid = try await NSHInjector.inject(plan: nsh, gdb: plan.endpoints.gdb)
             shell = .ready(pid: pid)
             if var record = RuntimeRecord.read(from: plan.paths.runtimeFile) {
                 record.shellPID = pid
@@ -389,8 +391,8 @@ public final class DeviceSession {
         if state == .injectingShell { state = .running }
     }
 
-    private func attachConsole(_ paths: DevicePaths) async {
-        guard let c = try? await ConsoleConnection.connect(path: paths.consoleSocket.path, timeout: 5) else { return }
+    private func attachConsole(_ endpoints: DeviceEndpoints) async {
+        guard let c = try? await ConsoleConnection.connect(endpoints.console, timeout: 5) else { return }
         console = c
         consoleConnected = true
         c.start(onData: { [weak self] data in
@@ -405,8 +407,8 @@ public final class DeviceSession {
         for h in consoleObservers.values { h(data) }
     }
 
-    private func attachScreen(_ paths: DevicePaths) async {
-        guard let v = try? await VNCClient.connect(path: paths.vncSocket.path, timeout: 10) else { return }
+    private func attachScreen(_ endpoints: DeviceEndpoints) async {
+        guard let v = try? await VNCClient.connect(endpoints.vnc, timeout: 10) else { return }
         vnc = v
         let size = v.size
         screenSize = CGSize(width: size.width, height: size.height)
@@ -488,15 +490,20 @@ public final class DeviceSession {
 
     /// The current screen as PNG.
     public func screenshotPNG() -> Data? {
-        guard let frame = latestFrame ?? vnc?.snapshot(), frame.width > 0,
-              let image = Self.cgImage(frame) else { return nil }
+        guard let frame = latestFrame ?? vnc?.snapshot(), frame.width > 0 else { return nil }
+        #if canImport(CoreGraphics)
+        guard let image = Self.cgImage(frame) else { return nil }
         let out = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(out, UTType.png.identifier as CFString, 1, nil) else { return nil }
         CGImageDestinationAddImage(dest, image, nil)
         guard CGImageDestinationFinalize(dest) else { return nil }
         return out as Data
+        #else
+        return PNGWriter.png(frame)
+        #endif
     }
 
+    #if canImport(CoreGraphics)
     private static let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
 
     public nonisolated static func cgImage(_ frame: VNCClient.Frame) -> CGImage? {
@@ -507,6 +514,7 @@ public final class DeviceSession {
                        bitmapInfo: CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue),
                        provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
     }
+    #endif
 }
 
 /// Holds the newest frame until the main thread takes it (frames that
@@ -542,6 +550,24 @@ public struct RuntimeRecord: Codable, Sendable {
     public var shell: Bool
     public var shellPID: Int?
     public var commandLine: String
+    /// Missing in records of Mirage versions that only used unix sockets.
+    public var endpoints: DeviceEndpoints?
+
+    public init(pid: Int32, qemu: String, startedAt: Date, bluetoothPort: Int?, shell: Bool,
+                shellPID: Int? = nil, commandLine: String, endpoints: DeviceEndpoints?) {
+        self.pid = pid
+        self.qemu = qemu
+        self.startedAt = startedAt
+        self.bluetoothPort = bluetoothPort
+        self.shell = shell
+        self.shellPID = shellPID
+        self.commandLine = commandLine
+        self.endpoints = endpoints
+    }
+
+    public func endpoints(_ paths: DevicePaths) -> DeviceEndpoints {
+        endpoints ?? .unix(paths)
+    }
 
     public func write(to url: URL) throws {
         try MirageLibrary.encoder.encode(self).write(to: url, options: .atomic)
@@ -554,14 +580,11 @@ public struct RuntimeRecord: Codable, Sendable {
 
     /// The record if its process still runs.
     public static func live(at url: URL) -> RuntimeRecord? {
-        guard let r = read(from: url), kill(r.pid, 0) == 0, processPath(r.pid)?.contains("qemu") == true else { return nil }
+        guard let r = read(from: url), HostProcess.isAlive(r.pid), processPath(r.pid)?.contains("qemu") == true else { return nil }
         return r
     }
 }
 
 func processPath(_ pid: Int32) -> String? {
-    var buf = [CChar](repeating: 0, count: 4096)
-    let n = proc_pidpath(pid, &buf, UInt32(buf.count))
-    guard n > 0 else { return nil }
-    return String(cString: buf)
+    HostProcess.executablePath(pid)
 }

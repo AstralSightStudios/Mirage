@@ -1,5 +1,7 @@
 import CLittleFS
+#if canImport(CryptoKit)
 import CryptoKit
+#endif
 import Foundation
 
 /// Builds the backing images a device boots from. These are the Swift

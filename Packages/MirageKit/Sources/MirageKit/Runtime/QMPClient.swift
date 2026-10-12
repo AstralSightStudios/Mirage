@@ -15,7 +15,11 @@ public final class QMPClient: @unchecked Sendable {
     }
 
     public static func connect(path: String, timeout: TimeInterval = 10) async throws -> QMPClient {
-        let s = try await StreamSocket.connect(unix: path, timeout: timeout)
+        try await connect(.unix(path), timeout: timeout)
+    }
+
+    public static func connect(_ endpoint: QEMUEndpoint, timeout: TimeInterval = 10) async throws -> QMPClient {
+        let s = try await StreamSocket.connect(endpoint, timeout: timeout)
         let client = QMPClient(socket: s)
         // a monitor that already has a client never greets
         s.setReadTimeout(3)
