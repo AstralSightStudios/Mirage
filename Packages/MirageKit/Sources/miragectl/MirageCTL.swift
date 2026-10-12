@@ -36,6 +36,15 @@ Devices
   sh DEVICE COMMAND...               run an NSH command, print its output
   console DEVICE                     interactive console (Ctrl-] quits)
 
+Files (VOLUME: "live" on a running device, else a partition from `fs volumes`)
+  fs volumes DEVICE                  file systems of the device
+  fs ls DEVICE VOLUME [PATH]
+  fs get DEVICE VOLUME PATH [OUT]    copy a file off the device (stdout without OUT)
+  fs put DEVICE VOLUME FILE PATH     copy a file onto the device
+  fs mkdir|rm DEVICE VOLUME PATH
+  fs mv DEVICE VOLUME PATH NEWPATH
+  fs replace DEVICE VOLUME IMAGE     write a romfs image over a romfs partition
+
 Images
   image nor OUT --size BYTES --part main|sensor [--did N --psn S --mac ADDR --prop K=V ...]
   image nand OUT --resource FILE
@@ -340,6 +349,73 @@ func run() async throws {
         guard s.consoleConnected else { fail("the console is in use (Mirage holds it?)") }
         let out = try await s.execute(command, timeout: Double(args.value("timeout") ?? "15") ?? 15)
         print(out)
+
+    case "fs":
+        let sub = args.positional.first ?? ""
+        let pos = Array(args.positional.dropFirst())
+        guard let d = pos.first.flatMap({ library.findDevice($0) }) else { fail("missing or unknown DEVICE") }
+        guard let profile = library.profile(d.profileID) else { fail("no profile \(d.profileID)") }
+        let s = await session(for: d, library)
+        if sub == "volumes" {
+            if s.state.isActive { print("live       /        the running device's file tree (NSH)") }
+            for v in DeviceFiles.volumes(of: d, profile: profile, library: library) {
+                let flags = (v.writable ? "rw" : "ro") + (v.replaceable ? ", replaceable" : "")
+                print(String(format: "%-12@ %-18@ %-7@ %6lld MiB  %@", v.name as NSString, (v.mountPoint ?? "-") as NSString,
+                             v.format.rawValue as NSString, v.size >> 20, flags as NSString))
+            }
+            return
+        }
+        guard pos.count >= 2 else { fail("fs \(sub) DEVICE VOLUME ...") }
+        let fs: GuestFileSystem
+        let volumeName = pos[1]
+        if volumeName == "live" {
+            guard s.state.isActive else { fail("\(d.name) is not running") }
+            guard s.consoleConnected else { fail("the console is in use (Mirage holds it?)") }
+            let shell = ShellFileSystem(session: s, unstatable: DeviceFiles.unstatableDirectories(profile: profile))
+            try await shell.connect()
+            fs = shell
+        } else {
+            guard !s.state.isActive else { fail("\(d.name) is running; use the volume \"live\" or shut it down") }
+            guard let v = DeviceFiles.volumes(of: d, profile: profile, library: library).first(where: { $0.name == volumeName || $0.mountPoint == volumeName }) else {
+                fail("no volume \(volumeName)")
+            }
+            if sub == "replace" {
+                guard pos.count >= 3 else { fail("fs replace DEVICE VOLUME IMAGE") }
+                try DeviceFiles.replaceImage(v, with: URL(fileURLWithPath: pos[2]), profile: profile)
+                print("replaced \(v.title)")
+                return
+            }
+            fs = try DeviceFiles.open(v, profile: profile)
+        }
+        let progress = ProgressLine()
+        switch sub {
+        case "ls":
+            for e in try await fs.list(pos.count > 2 ? pos[2] : "/") {
+                print(String(format: "%@ %10lld  %@%@", (e.mode ?? (e.isDirectory ? "d---------" : "----------")) as NSString,
+                             e.size, e.name as NSString, e.isDirectory ? "/" : ""))
+            }
+        case "get":
+            guard pos.count >= 3 else { fail("fs get DEVICE VOLUME PATH [OUT]") }
+            let data = try await fs.read(pos[2]) { progress.update($0, pos[2]) }
+            progress.done()
+            if pos.count > 3 { try data.write(to: URL(fileURLWithPath: pos[3])) } else { FileHandle.standardOutput.write(data) }
+        case "put":
+            guard pos.count >= 4 else { fail("fs put DEVICE VOLUME FILE PATH") }
+            let data = try Data(contentsOf: URL(fileURLWithPath: pos[2]))
+            try await fs.write(pos[3], data: data) { progress.update($0, pos[3]) }
+            progress.done()
+        case "mkdir":
+            guard pos.count >= 3 else { fail("fs mkdir DEVICE VOLUME PATH") }
+            try await fs.createDirectory(pos[2])
+        case "rm":
+            guard pos.count >= 3 else { fail("fs rm DEVICE VOLUME PATH") }
+            try await fs.remove(pos[2])
+        case "mv":
+            guard pos.count >= 4 else { fail("fs mv DEVICE VOLUME PATH NEWPATH") }
+            try await fs.rename(pos[2], to: pos[3])
+        default:
+            fail("unknown fs command \(sub)")
+        }
 
     case "console":
         let d = device()

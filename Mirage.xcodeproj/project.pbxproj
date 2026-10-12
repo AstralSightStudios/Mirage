@@ -12,10 +12,12 @@
 		45271FA449F5E06782A8FEFB /* ScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE153033D9513574027A01D /* ScreenView.swift */; };
 		4B51E2C9DAA080EF89B09D51 /* MirageKit in Frameworks */ = {isa = PBXBuildFile; productRef = BE87711245061830718926B6 /* MirageKit */; };
 		51FCE73DE97612383EFDB14E /* DeviceStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA3A53FEBEFC4D1DDB823A4 /* DeviceStage.swift */; };
+		5A838150EFA325D71F2EA39B /* FilesWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC55B15ACA82A998C028795 /* FilesWindow.swift */; };
 		74B5F40B404A1E2275672F58 /* AstroBoxService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */; };
 		78DB0EEE4783B23FF4E4F99F /* ArchiveWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26BBF700F6E96963D07F6C06 /* ArchiveWindow.swift */; };
 		8C848AFABCD2284F2E4F38F9 /* ConsolePane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C541A21E4B108F84089DB41 /* ConsolePane.swift */; };
 		8E68E01406EA697785B4E5D2 /* MirageApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B64956B64905E47BE3259C3 /* MirageApp.swift */; };
+		993F04F904608ACC2F3A8DAA /* FileBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B566AC05C53954B376E57780 /* FileBrowser.swift */; };
 		BF2DDB1EF9CD1CC38585CD18 /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E2C6E737F42510412EB521 /* InspectorView.swift */; };
 		C5FB29C61747D13A757904F1 /* ProfilesWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63A8FD0502C7F9519BEA5CAF /* ProfilesWindow.swift */; };
 		C67AB9CF6ABF3024575CBA26 /* NewDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C47C720649EC76C7ECB2A0 /* NewDeviceSheet.swift */; };
@@ -49,7 +51,9 @@
 		9C541A21E4B108F84089DB41 /* ConsolePane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsolePane.swift; sourceTree = "<group>"; };
 		A7397802AF6A76F4E5B19ED1 /* DeviceChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceChrome.swift; sourceTree = "<group>"; };
 		AE324B50FDD58CE97A9E1C29 /* ArchiveModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveModel.swift; sourceTree = "<group>"; };
+		B566AC05C53954B376E57780 /* FileBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowser.swift; sourceTree = "<group>"; };
 		DFBE0B053EDA634D3EF481A2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EEC55B15ACA82A998C028795 /* FilesWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesWindow.swift; sourceTree = "<group>"; };
 		F3937192ED9C13F0E8A2250F /* Mirage-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Mirage-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -72,6 +76,7 @@
 				96D1CF627AADBF304BCDB9F3 /* AppModel.swift */,
 				AE324B50FDD58CE97A9E1C29 /* ArchiveModel.swift */,
 				5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */,
+				B566AC05C53954B376E57780 /* FileBrowser.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -146,6 +151,7 @@
 				04F5D821E9738A35C8FCCD0A /* Archive */,
 				E651D81856D760E7FE9A50B5 /* Console */,
 				09C1A07276FB96E5610D5309 /* Device */,
+				D7C68DD59DC5D0388398145A /* Files */,
 				C3B3D15D34A00777AE66C927 /* Inspector */,
 				0F3D5BF3D9167E80393A79EB /* Profiles */,
 				4E8D58DAADF6C500FD0ED481 /* HubView.swift */,
@@ -153,6 +159,14 @@
 				5D4E2ED21A166D0D0983A10D /* SettingsView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		D7C68DD59DC5D0388398145A /* Files */ = {
+			isa = PBXGroup;
+			children = (
+				EEC55B15ACA82A998C028795 /* FilesWindow.swift */,
+			);
+			path = Files;
 			sourceTree = "<group>";
 		};
 		E651D81856D760E7FE9A50B5 /* Console */ = {
@@ -189,7 +203,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = FE72F8760A20C3845CB01CE3 /* Build configuration list for PBXNativeTarget "Mirage" */;
 			buildPhases = (
-				C54D4C5E1506F4D58F6BE874 /* Build AstroBox Bridge */,
+				2E23D662B03C6713AEB524A9 /* Build Companion Core */,
 				454DA222E1FEEBC5F51C41C4 /* Sources */,
 				B357F57091F2F21E65636BD7 /* Resources */,
 				D685DA08310A8C12F6E29BB0 /* Frameworks */,
@@ -257,6 +271,25 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		2E23D662B03C6713AEB524A9 /* Build Companion Core */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Companion Core";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/build-companion-core.sh\"\n";
+		};
 		B8AB9CE504CD1AE0B4DACEB7 /* Bundle QEMU */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -276,25 +309,6 @@
 			shellPath = /bin/sh;
 			shellScript = "\"$SRCROOT/Scripts/bundle-qemu.sh\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME\"\n";
 		};
-		C54D4C5E1506F4D58F6BE874 /* Build AstroBox Bridge */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Build Companion Core";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/Scripts/build-companion-core.sh\"\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -311,6 +325,8 @@
 				8C848AFABCD2284F2E4F38F9 /* ConsolePane.swift in Sources */,
 				27C8A7B47E0E1911DD5D98DB /* DeviceChrome.swift in Sources */,
 				51FCE73DE97612383EFDB14E /* DeviceStage.swift in Sources */,
+				993F04F904608ACC2F3A8DAA /* FileBrowser.swift in Sources */,
+				5A838150EFA325D71F2EA39B /* FilesWindow.swift in Sources */,
 				F8694AC5C4C3DF5BA1CC2901 /* HubView.swift in Sources */,
 				BF2DDB1EF9CD1CC38585CD18 /* InspectorView.swift in Sources */,
 				8E68E01406EA697785B4E5D2 /* MirageApp.swift in Sources */,

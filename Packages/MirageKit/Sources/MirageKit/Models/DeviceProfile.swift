@@ -201,10 +201,14 @@ public struct NANDSpec: Codable, Hashable, Sendable {
     /// from the package's main_res files (Band 9 / Band 10). nil means the
     /// resource romfs above is used instead.
     public var systemPages: Int?
+    /// Size in pages of the yaffs2 /data partition (nand_data in the
+    /// firmware's partition table), right after system / resource. nil
+    /// runs to the end of the part.
+    public var dataPages: Int?
 
     public init(pageSize: Int, oobSize: Int, pagesPerBlock: Int, blocks: Int,
                 resourceImage: String, resourceFirstPage: Int, resourcePages: Int,
-                systemPages: Int? = nil) {
+                systemPages: Int? = nil, dataPages: Int? = nil) {
         self.pageSize = pageSize
         self.oobSize = oobSize
         self.pagesPerBlock = pagesPerBlock
@@ -213,7 +217,11 @@ public struct NANDSpec: Codable, Hashable, Sendable {
         self.resourceFirstPage = resourceFirstPage
         self.resourcePages = resourcePages
         self.systemPages = systemPages
+        self.dataPages = dataPages
     }
+
+    public var dataFirstPage: Int { systemPages ?? (resourceFirstPage + resourcePages) }
+    public var dataPageCount: Int { dataPages ?? (blocks * pagesPerBlock - dataFirstPage) }
 
     public var imageSize: Int { (pageSize + oobSize) * pagesPerBlock * blocks }
     public var capacity: Int { pageSize * pagesPerBlock * blocks }
@@ -258,7 +266,7 @@ public extension DeviceProfile {
             mainNOR: true,
             nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
                         resourceImage: "vela_resource.bin", resourceFirstPage: 0,
-                        resourcePages: 0x19000),
+                        resourcePages: 0x19000, dataPages: 133_120),
             factory: .init(flash: .mainNOR, offset: 32512 * 512, blockSize: 8192,
                            blockCount: 16, ioSize: 512, diskVersion: 0x0002_0001)),
         consoleUART: 2,
@@ -310,7 +318,7 @@ public extension DeviceProfile {
             mainNOR: true,
             nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
                         resourceImage: "vela_resource.bin", resourceFirstPage: 0,
-                        resourcePages: 65536),
+                        resourcePages: 65536, dataPages: 196_608),
             factory: .init(flash: .mainNOR, offset: 32256 * 512, blockSize: 8192,
                            blockCount: 16, ioSize: 512, diskVersion: 0x0002_0001)),
         consoleUART: 2,
@@ -334,7 +342,7 @@ public extension DeviceProfile {
             mainNOR: true,
             nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
                         resourceImage: "", resourceFirstPage: 0, resourcePages: 0,
-                        systemPages: 65536),
+                        systemPages: 65536, dataPages: 65536),
             factory: .init(flash: .mainNOR, offset: 16368 * 512, blockSize: 8192,
                            blockCount: 1, ioSize: 512, diskVersion: 0, format: .rawInfo)),
         consoleUART: 2,
@@ -357,7 +365,7 @@ public extension DeviceProfile {
             mainNOR: true,
             nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
                         resourceImage: "", resourceFirstPage: 0, resourcePages: 0,
-                        systemPages: 65536),
+                        systemPages: 65536, dataPages: 196_608),
             factory: .init(flash: .mainNOR, offset: 16368 * 512, blockSize: 8192,
                            blockCount: 1, ioSize: 512, diskVersion: 0, format: .rawInfo)),
         consoleUART: 2,
@@ -380,10 +388,10 @@ public extension DeviceProfile {
             mainNOR: true,
             nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
                         resourceImage: "", resourceFirstPage: 0, resourcePages: 0,
-                        systemPages: 57600),
+                        systemPages: 57600, dataPages: 73472),
             factory: .init(flash: .mainNOR, offset: 16368 * 512, blockSize: 8192,
                            blockCount: 1, ioSize: 512, diskVersion: 0, format: .rawInfo)),
-        consoleUART: 2,
+        consoleUART: 1,
         defaults: .init(didPrefix: "150", psnPrefix: "QEMU1506"),
         accent: "#FF9F0A",
         notes: "Panel 336x480 (rm690c0 driver), Hynitron CST92xx touch on I2C5, W1150 light sensor on I2C5, SPI NAND (yaffs /system + /data). No physical buttons.",

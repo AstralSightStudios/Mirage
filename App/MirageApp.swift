@@ -39,6 +39,15 @@ struct MirageApp: App {
         }
         .defaultSize(width: 900, height: 520)
 
+        WindowGroup("Files", id: "files", for: UUID.self) { $id in
+            if let id, let d = model.device(id) {
+                FilesWindow(device: d)
+                    .environment(model)
+                    .frame(minWidth: 720, minHeight: 420)
+            }
+        }
+        .defaultSize(width: 1040, height: 640)
+
         Settings {
             SettingsView().environment(model)
         }
@@ -120,6 +129,9 @@ struct MirageCommands: Commands {
             }
             Button("Show Console") { hub?.showConsole.wrappedValue.toggle() }
                 .keyboardShortcut("c", modifiers: [.command, .shift])
+            Button("Show Files") { if let id { openWindow(id: "files", value: id) } }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+                .disabled(id == nil)
             Button("Zoom to Fit") { hub?.zoom.wrappedValue = .fit }
                 .keyboardShortcut("0")
             Button("Pixel Accurate") { hub?.zoom.wrappedValue = .scale(1 / (NSScreen.main?.backingScaleFactor ?? 2)) }

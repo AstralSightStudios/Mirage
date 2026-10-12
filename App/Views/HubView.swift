@@ -40,6 +40,11 @@ struct HubView: View {
                     Button { showConsole.toggle() } label: { Label("Console", systemImage: "doc.text") }
                         .disabled(model.selection == nil)
                         .help("Toggle NSH Console")
+                    Button { if let id = model.selection { openWindow(id: "files", value: id) } } label: {
+                        Label("Files", systemImage: "folder")
+                    }
+                    .disabled(model.selection == nil)
+                    .help("Browse the device's files")
                     Button { showInspector.toggle() } label: { Label("Inspector", systemImage: "sidebar.right") }
                 }
             }

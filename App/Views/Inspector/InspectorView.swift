@@ -216,6 +216,7 @@ private struct FirmwareSwitcher: View {
 
 private struct StorageTab: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     let device: VirtualDevice
     @State private var factory: [FactoryIdentity.Property] = []
     @State private var factoryError: String?
@@ -237,6 +238,13 @@ private struct StorageTab: View {
                     .padding(.vertical, 10)
                 }
             }
+            VStack(alignment: .leading, spacing: 6) {
+                Button("Browse Files…") { openWindow(id: "files", value: device.id) }
+                Text(active ? "Opens the running device's file tree through its shell."
+                     : "Opens /data and the romfs partitions straight from the storage images.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(.top, 10)
             InspectorSection(title: "Images") {
                 ForEach(images) { img in
                     VStack(alignment: .leading, spacing: 3) {
