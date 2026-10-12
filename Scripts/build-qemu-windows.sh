@@ -35,7 +35,7 @@ if [ ! -f build.ninja ]; then
         --enable-system --enable-tcg --enable-vnc --enable-pixman \
         --disable-werror --disable-debug-info --enable-strip
 fi
-make -j"$(nproc)" qemu-system-arm
+make -j"$(nproc)" qemu-system-arm.exe
 
 rm -rf "$DEST"
 mkdir -p "$DEST/pc-bios"

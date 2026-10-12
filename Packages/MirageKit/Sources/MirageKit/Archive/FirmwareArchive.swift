@@ -2,6 +2,9 @@
 import CryptoKit
 #endif
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// AstralSightStudios/MiWearFirmwareArchives on GitHub: every official
 /// firmware, one release per product version, full and incremental OTA
