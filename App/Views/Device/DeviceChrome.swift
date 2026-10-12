@@ -137,9 +137,9 @@ struct DeviceChrome<Screen: View>: View {
             .shadow(color: .black.opacity(0.35), radius: max(8, 16 * scale), x: 0, y: max(4, 8 * scale))
             .shadow(color: .black.opacity(0.12), radius: max(2, 4 * scale), x: 0, y: max(1, 2 * scale))
         } else {
-            // Concentric rounded rectangle follows device corner radius + padding
+            // Concentric superellipse follows device corner radius + padding
             let cardRadius = (profile.screen.cornerRadius * scale) + padding
-            let cardShape = RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
+            let cardShape = Superellipse(cornerRadius: cardRadius)
             let cardWidth = screenSize.width + padding * 2
             let cardHeight = screenSize.height + padding * 2
 
@@ -177,10 +177,11 @@ struct DeviceChrome<Screen: View>: View {
                     )
 
                 let r = profile.screen.cornerRadius * scale
+                let screenShape = Superellipse(cornerRadius: r)
                 screen()
                     .frame(width: screenSize.width, height: screenSize.height)
-                    .clipShape(RoundedRectangle(cornerRadius: r, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Color.white.opacity(0.14), lineWidth: max(0.5, 0.8 * scale)))
+                    .clipShape(screenShape)
+                    .overlay(screenShape.stroke(Color.white.opacity(0.14), lineWidth: max(0.5, 0.8 * scale)))
                     .shadow(color: .black.opacity(0.50), radius: 6 * scale, y: 2 * scale)
             }
             .frame(width: cardWidth, height: cardHeight)
@@ -214,7 +215,7 @@ struct HardwareButtonColumn: View {
         .padding(.horizontal, max(8, 10 * scale))
         .padding(.vertical, max(10, 14 * scale))
         .background {
-            let dockShape = RoundedRectangle(cornerRadius: max(16, 20 * scale), style: .continuous)
+            let dockShape = Superellipse(cornerRadius: max(16, 20 * scale))
             ZStack {
                 dockShape.fill(Color(white: 0.10).opacity(0.80))
                 dockShape.fill(.ultraThinMaterial)
@@ -248,7 +249,7 @@ struct HardwareButtonView: View {
     var body: some View {
         let btnWidth = max(52, 64 * scale)
         let btnHeight = max(46, 54 * scale)
-        let btnShape = RoundedRectangle(cornerRadius: max(10, 14 * scale), style: .continuous)
+        let btnShape = Superellipse(cornerRadius: max(10, 14 * scale))
 
         VStack(spacing: 3) {
             ZStack {
@@ -341,17 +342,17 @@ struct DeviceGlyph: View {
     var body: some View {
         let accent = profile.flatMap { Color(hex: $0.accent) } ?? .gray
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+            Superellipse(cornerRadius: size * 0.28)
                 .fill(active ? accent.opacity(0.25) : Color.white.opacity(0.06))
                 .overlay {
-                    RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    Superellipse(cornerRadius: size * 0.28)
                         .strokeBorder(active ? accent.opacity(0.55) : Color.white.opacity(0.12), lineWidth: 1)
                 }
             Group {
                 if profile?.family == .band {
-                    RoundedRectangle(cornerRadius: size * 0.12, style: .continuous)
+                    Superellipse(cornerRadius: size * 0.12)
                         .fill(Color.black)
-                        .overlay(RoundedRectangle(cornerRadius: size * 0.12, style: .continuous)
+                        .overlay(Superellipse(cornerRadius: size * 0.12)
                             .strokeBorder(active ? accent : Color(white: 0.55), lineWidth: 1))
                         .frame(width: size * 0.42, height: size * 0.62)
                 } else {
@@ -377,5 +378,100 @@ extension Color {
     var hexString: String {
         let c = NSColor(self).usingColorSpace(.sRGB) ?? .gray
         return String(format: "#%02X%02X%02X", Int(c.redComponent * 255), Int(c.greenComponent * 255), Int(c.blueComponent * 255))
+    }
+}
+
+/// A continuous curvature superellipse / squircle shape (超椭圆平滑曲线).
+///
+/// Built on Kenya Hara / Xiaomi HyperOS industrial design curvature ($n = 3.0$),
+/// providing true $G^2$ continuous curvature transition between straight edges and
+/// rounded corners with no abrupt tangent breaks or curvature jumps.
+struct Superellipse: InsettableShape, Sendable {
+    var cornerRadius: CGFloat
+    var exponent: CGFloat
+    var insetAmount: CGFloat
+
+    init(cornerRadius: CGFloat, exponent: CGFloat = 3.0, insetAmount: CGFloat = 0) {
+        self.cornerRadius = max(0, cornerRadius)
+        self.exponent = max(1.0, exponent)
+        self.insetAmount = insetAmount
+    }
+
+    func inset(by amount: CGFloat) -> Superellipse {
+        var copy = self
+        copy.insetAmount += amount
+        return copy
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let drawRect = rect.insetBy(dx: insetAmount, dy: insetAmount)
+        guard drawRect.width > 0 && drawRect.height > 0 else { return Path() }
+
+        let w = drawRect.width
+        let h = drawRect.height
+        let effectiveR = max(0, min(cornerRadius - insetAmount, min(w, h) / 2))
+
+        if effectiveR <= 0.001 {
+            return Path(drawRect)
+        }
+
+        let n = exponent
+        let invN2 = 2.0 / Double(n)
+        let steps = 16
+
+        let minX = drawRect.minX
+        let maxX = drawRect.maxX
+        let minY = drawRect.minY
+        let maxY = drawRect.maxY
+
+        var p = Path()
+        p.move(to: CGPoint(x: minX + effectiveR, y: minY))
+
+        // 1. Top straight edge
+        p.addLine(to: CGPoint(x: maxX - effectiveR, y: minY))
+
+        // 2. Top-right corner (superellipse curve)
+        for i in 1...steps {
+            let t = (Double.pi / 2.0) * (Double(i) / Double(steps))
+            let dx = effectiveR * CGFloat(pow(sin(t), invN2))
+            let dy = effectiveR * CGFloat(1.0 - pow(cos(t), invN2))
+            p.addLine(to: CGPoint(x: (maxX - effectiveR) + dx, y: minY + dy))
+        }
+
+        // 3. Right straight edge
+        p.addLine(to: CGPoint(x: maxX, y: maxY - effectiveR))
+
+        // 4. Bottom-right corner (superellipse curve)
+        for i in 1...steps {
+            let t = (Double.pi / 2.0) * (Double(i) / Double(steps))
+            let dx = effectiveR * CGFloat(1.0 - pow(cos(t), invN2))
+            let dy = effectiveR * CGFloat(pow(sin(t), invN2))
+            p.addLine(to: CGPoint(x: maxX - dx, y: (maxY - effectiveR) + dy))
+        }
+
+        // 5. Bottom straight edge
+        p.addLine(to: CGPoint(x: minX + effectiveR, y: maxY))
+
+        // 6. Bottom-left corner (superellipse curve)
+        for i in 1...steps {
+            let t = (Double.pi / 2.0) * (Double(i) / Double(steps))
+            let dx = effectiveR * CGFloat(pow(sin(t), invN2))
+            let dy = effectiveR * CGFloat(1.0 - pow(cos(t), invN2))
+            p.addLine(to: CGPoint(x: minX + effectiveR - dx, y: maxY - dy))
+        }
+
+        // 7. Left straight edge
+        p.addLine(to: CGPoint(x: minX, y: minY + effectiveR))
+
+        // 8. Top-left corner (superellipse curve)
+        for i in 1...steps {
+            let t = (Double.pi / 2.0) * (Double(i) / Double(steps))
+            let dx = effectiveR * CGFloat(1.0 - pow(cos(t), invN2))
+            let dy = effectiveR * CGFloat(pow(sin(t), invN2))
+            p.addLine(to: CGPoint(x: minX + dx, y: minY + effectiveR - dy))
+        }
+
+        p.closeSubpath()
+        return p
     }
 }

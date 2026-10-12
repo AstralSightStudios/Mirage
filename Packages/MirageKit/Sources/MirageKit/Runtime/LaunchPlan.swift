@@ -28,11 +28,25 @@ public enum QEMULocator {
         public var exists: Bool
     }
 
+    #if os(Windows)
+    static let binaryName = "qemu-system-arm.exe"
+    #else
+    static let binaryName = "qemu-system-arm"
+    #endif
+
+    static func isRunnable(_ url: URL) -> Bool {
+        #if os(Windows)
+        return FileManager.default.fileExists(atPath: url.path)
+        #else
+        return FileManager.default.isExecutableFile(atPath: url.path)
+        #endif
+    }
+
     public static func candidates() -> [Candidate] {
         var out: [Candidate] = []
         func add(_ title: String, _ url: URL) {
             guard !out.contains(where: { $0.url == url }) else { return }
-            out.append(.init(title: title, url: url, exists: FileManager.default.isExecutableFile(atPath: url.path)))
+            out.append(.init(title: title, url: url, exists: isRunnable(url)))
         }
         if let env = ProcessInfo.processInfo.environment["MIRAGE_QEMU"], !env.isEmpty {
             add("MIRAGE_QEMU", URL(fileURLWithPath: env))
@@ -40,11 +54,17 @@ public enum QEMULocator {
         if let custom = MirageLibrary.defaults.string(forKey: overrideKey), !custom.isEmpty {
             add("Custom", URL(fileURLWithPath: custom))
         }
+        #if os(macOS)
         if let helpers = Bundle.main.privateFrameworksURL?.deletingLastPathComponent() {
             add("Bundled with Mirage", helpers.appendingPathComponent("Helpers/qemu/bin/qemu-system-arm"))
         }
+        #else
+        // qemu\ next to Mirage.exe (Windows zip) or the mirage binary
+        let exeDir = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent()
+        add("Bundled with Mirage", exeDir.appendingPathComponent("qemu/\(binaryName)"))
+        #endif
         if let root = sourceRoot {
-            add("Submodule build", root.appendingPathComponent("External/qemu-miwear/build/qemu-system-arm"))
+            add("Submodule build", root.appendingPathComponent("External/qemu-miwear/build/\(binaryName)"))
         }
         return out
     }
@@ -57,7 +77,12 @@ public enum QEMULocator {
     public static func boards(of qemu: URL) -> [String] {
         let p = Process()
         p.executableURL = qemu
-        p.arguments = ["-M", "miwear,profile=help", "-kernel", "/dev/null", "-display", "none"]
+        #if os(Windows)
+        let nullDevice = "NUL"
+        #else
+        let nullDevice = "/dev/null"
+        #endif
+        p.arguments = ["-M", "miwear,profile=help", "-kernel", nullDevice, "-display", "none"]
         let out = Pipe()
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice
@@ -91,6 +116,7 @@ public struct LaunchPlan: Sendable {
     public var arguments: [String]
     public var workingDirectory: URL
     public var paths: DevicePaths
+    public var endpoints: DeviceEndpoints
     public var bluetoothPort: Int?
     public var shell: Bool
     public var firmwareImage: URL
@@ -115,14 +141,15 @@ public struct LaunchPlan: Sendable {
         if profile.storage.sensorNORSize != nil { machine += ",sensor-nor=\(escape(paths.sensorNOR.path))" }
         if profile.storage.nand != nil { machine += ",nand-image=\(escape(paths.nand.path))" }
 
+        let endpoints = try DeviceEndpoints.forHost(paths)
         var args = ["-M", machine, "-kernel", ap.path,
                     "-name", "Mirage: \(escape(device.name))",
                     "-display", "none",
-                    "-vnc", "unix:\(paths.vncSocket.path)",
-                    "-qmp", "unix:\(paths.qmpSocket.path),server=on,wait=off",
-                    "-qmp", "unix:\(paths.runtime.appendingPathComponent("qmp-aux.sock").path),server=on,wait=off",
+                    "-vnc", endpoints.vnc.vncOption,
+                    "-qmp", endpoints.qmp.serverOption,
+                    "-qmp", endpoints.qmpAux.serverOption,
                     "-monitor", "none",
-                    "-chardev", "socket,id=con,path=\(paths.consoleSocket.path),server=on,wait=off,logfile=\(escape(paths.consoleLog.path))"]
+                    "-chardev", "socket,id=con,\(endpoints.console.chardevAddress),server=on,wait=off,logfile=\(escape(paths.consoleLog.path))"]
         for n in 0..<max(profile.uartCount, profile.consoleUART + 1) {
             args += ["-serial", n == profile.consoleUART ? "chardev:con" : "file:\(paths.uartLog(n).path)"]
         }
@@ -141,7 +168,7 @@ public struct LaunchPlan: Sendable {
             }
         }
         if device.options.shell {
-            args += ["-S", "-gdb", "unix:\(paths.gdbSocket.path),server=on,wait=off"]
+            args += ["-S", "-gdb", endpoints.gdb.serverOption]
         }
         // Keymaps directory for VNC so QEMU never fails with missing 'en-us' keymap
         let qemuDir = qemu.deletingLastPathComponent()
@@ -169,7 +196,7 @@ public struct LaunchPlan: Sendable {
         for t in device.options.traceEvents where !t.isEmpty { args += ["-trace", t] }
         args += device.options.extraArguments.filter { !$0.isEmpty }
         return LaunchPlan(executable: qemu, arguments: args, workingDirectory: paths.root, paths: paths,
-                          bluetoothPort: btPort, shell: device.options.shell, firmwareImage: ap)
+                          endpoints: endpoints, bluetoothPort: btPort, shell: device.options.shell, firmwareImage: ap)
     }
 
     /// QEMU option values escape commas by doubling them.

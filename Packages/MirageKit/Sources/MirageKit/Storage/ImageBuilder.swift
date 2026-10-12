@@ -1,5 +1,7 @@
 import CLittleFS
+#if canImport(CryptoKit)
 import CryptoKit
+#endif
 import Foundation
 
 /// Builds the backing images a device boots from. These are the Swift
@@ -625,12 +627,27 @@ enum RawInfo {
 /// resource file becomes one file at the root, in ota.json order. Written
 /// the way the firmware writes it: 2048-byte chunks with inband tags
 /// (the last 16 bytes: seq, obj id, chunk id, bytes), 64 chunks per block.
-/// Matches emu/mknand.py.
+/// The yaffs2 tree the Band 9, Band 10 and Band 9 Pro firmware mounts as /system
+/// (`mount -t yaffs -o ro /dev/nand_system /system`). Files and directories are
+/// written the way the firmware writes them: 2048-byte chunks with inband tags
+/// (the last 16 bytes: seq, obj id, chunk id, bytes), 64 chunks per block.
 enum Yaffs2 {
     struct File {
         var name: String
         var url: URL
         var size: Int
+        var isDirectory: Bool = false
+        var oid: UInt32 = 0
+        var parent: UInt32 = 1
+
+        init(name: String, url: URL, size: Int, isDirectory: Bool = false, oid: UInt32 = 0, parent: UInt32 = 1) {
+            self.name = name
+            self.url = url
+            self.size = size
+            self.isDirectory = isDirectory
+            self.oid = oid
+            self.parent = parent
+        }
     }
 
     static let chunkData = 2048 - 16
@@ -638,36 +655,85 @@ enum Yaffs2 {
     static let firstObj: UInt32 = 257
     static let root: UInt32 = 1
     static let typeFile: UInt32 = 1
+    static let typeDir: UInt32 = 3
     static let extraHeader: UInt32 = 0x8000_0000
     static let typeShift: UInt32 = 28
     static let fileMode: UInt32 = 0o644
+    static let dirMode: UInt32 = 0o755
     static let time: UInt32 = 946_684_800       // 2000-01-01, the files' times
     static let chunksPerBlock = 64
 
-    /// The package's main_res files, in ota.json order. Files the package
-    /// lists but does not contain are skipped.
+    /// Files and directories for /system. If a "system" directory exists in the
+    /// package (e.g. Band 9 Pro), it is traversed recursively. Otherwise, the
+    /// package's main_res files are gathered from ota.json.
     static func systemFiles(in dir: URL) throws -> [File] {
+        let sysDir = dir.appendingPathComponent("system")
+        var isDir: ObjCBool = false
+        if FileManager.default.fileExists(atPath: sysDir.path, isDirectory: &isDir), isDir.boolValue {
+            return try walkTree(rootURL: sysDir)
+        }
         let manifest = dir.appendingPathComponent("ota.json")
-        guard FileManager.default.fileExists(atPath: manifest.path) else { return [] }
-        let data = try Data(contentsOf: manifest)
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let sections = json["sections"] as? [[String: Any]] else {
-            throw MirageError.invalid("\(manifest.lastPathComponent) lists no sections")
+        if FileManager.default.fileExists(atPath: manifest.path) {
+            let data = try Data(contentsOf: manifest)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let sections = json["sections"] as? [[String: Any]] else {
+                throw MirageError.invalid("\(manifest.lastPathComponent) lists no sections")
+            }
+            var files: [File] = []
+            for sec in sections where sec["section_type"] as? String == "main_res" {
+                guard let name = sec["location_path"] as? String else { continue }
+                let url = dir.appendingPathComponent(name)
+                guard FileManager.default.fileExists(atPath: url.path) else { continue }
+                let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+                files.append(File(name: name, url: url, size: size))
+            }
+            return files
         }
+        // Fallback: flat non-firmware files in dir
+        let contents = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey])) ?? []
+        return contents.compactMap { url in
+            let name = url.lastPathComponent
+            guard !name.hasPrefix("vela_") && !name.hasPrefix(".") && !name.hasSuffix(".json") else { return nil }
+            let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+            return File(name: name, url: url, size: size)
+        }
+    }
+
+    private static func walkTree(rootURL: URL) throws -> [File] {
         var files: [File] = []
-        for sec in sections where sec["section_type"] as? String == "main_res" {
-            guard let name = sec["location_path"] as? String else { continue }
-            let url = dir.appendingPathComponent(name)
-            guard FileManager.default.fileExists(atPath: url.path) else { continue }
-            let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
-            files.append(File(name: name, url: url, size: size))
+        var nextOID: UInt32 = firstObj
+        var dirOIDs: [URL: UInt32] = [rootURL: root]
+
+        func walk(dir: URL, parentOID: UInt32) throws {
+            let items = try FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey])
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            for item in items {
+                let name = item.lastPathComponent
+                guard !name.hasPrefix(".") else { continue }
+                let vals = try item.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+                if vals.isDirectory == true {
+                    let oid = nextOID
+                    nextOID += 1
+                    dirOIDs[item] = oid
+                    files.append(File(name: name, url: item, size: 0, isDirectory: true, oid: oid, parent: parentOID))
+                    try walk(dir: item, parentOID: oid)
+                } else {
+                    let oid = nextOID
+                    nextOID += 1
+                    let sz = vals.fileSize ?? 0
+                    files.append(File(name: name, url: item, size: sz, isDirectory: false, oid: oid, parent: parentOID))
+                }
+            }
         }
+        try walk(dir: rootURL, parentOID: root)
         return files
     }
 
     /// Pages the tree occupies: one header chunk plus data chunks per file.
     static func pageCount(_ files: [File]) throws -> Int {
-        files.reduce(0) { $0 + 1 + ($1.size + chunkData - 1) / chunkData }
+        files.reduce(0) { total, file in
+            total + 1 + (file.isDirectory ? 0 : (file.size + chunkData - 1) / chunkData)
+        }
     }
 
     /// Calls `emit` with each 2048-byte page (chunk data, then its tags).
@@ -682,34 +748,42 @@ enum Yaffs2 {
             index += 1
         }
         for (i, file) in files.enumerated() {
-            let oid = firstObj + UInt32(i)
-            try page(oid: oid | (typeFile << typeShift), cid: extraHeader | root,
-                     nbytes: UInt32(truncatingIfNeeded: file.size), data: header(name: file.name, size: file.size))
-            let handle = try FileHandle(forReadingFrom: file.url)
-            defer { try? handle.close() }
-            var cid: UInt32 = 1
-            while let data = try handle.read(upToCount: chunkData), !data.isEmpty {
-                try page(oid: oid, cid: cid, nbytes: UInt32(data.count), data: data)
-                cid += 1
+            let oid = file.oid != 0 ? file.oid : (firstObj + UInt32(i))
+            let parent = file.parent
+            if file.isDirectory {
+                let hdr = header(type: typeDir, parent: parent, name: file.name, size: 0xFFFF_FFFF, mode: dirMode)
+                try page(oid: oid | (typeDir << typeShift), cid: extraHeader | parent,
+                         nbytes: 0, data: hdr)
+            } else {
+                let hdr = header(type: typeFile, parent: parent, name: file.name, size: file.size, mode: fileMode)
+                try page(oid: oid | (typeFile << typeShift), cid: extraHeader | parent,
+                         nbytes: UInt32(truncatingIfNeeded: file.size), data: hdr)
+                let handle = try FileHandle(forReadingFrom: file.url)
+                defer { try? handle.close() }
+                var cid: UInt32 = 1
+                while let data = try handle.read(upToCount: chunkData), !data.isEmpty {
+                    try page(oid: oid, cid: cid, nbytes: UInt32(data.count), data: data)
+                    cid += 1
+                }
             }
         }
     }
 
-    /// The file header chunk: type, parent, name, mode and times, size, and
+    /// The header chunk: type, parent, name, mode and times, size, and
     /// the fields the firmware expects; unused bytes are 0xFF.
-    static func header(name: String, size: Int) -> Data {
+    static func header(type: UInt32, parent: UInt32, name: String, size: Int, mode: UInt32) -> Data {
         var h = Data(repeating: 0xFF, count: chunkData)
         func put32(_ v: UInt32, at off: Int) { h.replaceSubrange(off..<(off + 4), with: le32(v)) }
-        put32(typeFile, at: 0)
-        put32(root, at: 4)
+        put32(type, at: 0)
+        put32(parent, at: 4)
         let raw = Array(name.utf8.prefix(255))
         h.replaceSubrange(10..<266, with: raw + [UInt8](repeating: 0, count: 256 - raw.count))
-        for (i, v) in [fileMode, 0, 0, time, time, time].enumerated() { put32(v, at: 268 + 4 * i) }
+        for (i, v) in [mode, 0, 0, time, time, time].enumerated() { put32(v, at: 268 + 4 * i) }
         put32(UInt32(truncatingIfNeeded: size), at: 292)
         put32(0xFFFF_FFFF, at: 296)
         for (i, v) in [0, time, 0, time, 0, time, 0].enumerated() { put32(UInt32(v), at: 460 + 4 * i) }
         put32(0, at: 488)
-        put32(UInt32(truncatingIfNeeded: size >> 32), at: 496)
+        put32(type == typeDir ? 0 : UInt32(truncatingIfNeeded: size >> 32), at: 496)
         put32(0, at: 504)
         put32(0, at: 508)
         return h

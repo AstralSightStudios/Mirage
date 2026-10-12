@@ -1,5 +1,17 @@
+#if canImport(CryptoKit)
 import CryptoKit
+#endif
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
+#if canImport(FoundationNetworking)
+// swift-corelibs-foundation has no constant for the resume data key
+private let resumeDataKey = "NSURLSessionDownloadTaskResumeData"
+#else
+private let resumeDataKey = NSURLSessionDownloadTaskResumeData
+#endif
 
 /// AstralSightStudios/MiWearFirmwareArchives on GitHub: every official
 /// firmware, one release per product version, full and incremental OTA
@@ -205,7 +217,7 @@ public final class ArchiveDownload: NSObject, URLSessionDownloadDelegate, @unche
 
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let error else { return }
-        if let data = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+        if let data = (error as NSError).userInfo[resumeDataKey] as? Data {
             try? data.write(to: resumeDataURL)
         }
         let cancelled = (error as NSError).code == NSURLErrorCancelled

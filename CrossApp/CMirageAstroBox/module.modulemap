@@ -1,0 +1,5 @@
+module CMirageAstroBox [system] {
+    header "../../AstroBoxBridge/include/mirage_astrobox.h"
+    link "mirage_astrobox"
+    export *
+}

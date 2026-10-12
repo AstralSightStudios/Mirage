@@ -12,7 +12,11 @@ public final class ConsoleConnection: @unchecked Sendable {
     }
 
     public static func connect(path: String, timeout: TimeInterval = 10) async throws -> ConsoleConnection {
-        let s = try await StreamSocket.connect(unix: path, timeout: timeout)
+        try await connect(.unix(path), timeout: timeout)
+    }
+
+    public static func connect(_ endpoint: QEMUEndpoint, timeout: TimeInterval = 10) async throws -> ConsoleConnection {
+        let s = try await StreamSocket.connect(endpoint, timeout: timeout)
         return ConsoleConnection(socket: s)
     }
 

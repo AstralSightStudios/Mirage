@@ -26,10 +26,14 @@ public enum NSHInjector {
         return Plan(shMain: main, shName: name, call: call, spawn: spawn)
     }
 
-    /// Runs the injection over the gdbstub at `socketPath`; returns the
+    /// Runs the injection over the gdbstub at `path`; returns the
     /// shell's task ID.
     public static func inject(plan: Plan, gdbSocket path: String, timeout: TimeInterval = 300) async throws -> Int {
-        let sock = try await StreamSocket.connect(unix: path, timeout: 15)
+        try await inject(plan: plan, gdb: .unix(path), timeout: timeout)
+    }
+
+    public static func inject(plan: Plan, gdb endpoint: QEMUEndpoint, timeout: TimeInterval = 300) async throws -> Int {
+        let sock = try await StreamSocket.connect(endpoint, timeout: 15)
         return try await runBlocking {
             let g = GDBRemote(socket: sock)
             defer { sock.close() }
@@ -284,21 +288,41 @@ final class FirmwareLayout {
 
     func find(_ needle: [UInt8]) -> [Int] {
         guard !needle.isEmpty, needle.count <= bytes.count else { return [] }
-        return bytes.withUnsafeBufferPointer { d in
-            needle.withUnsafeBufferPointer { nd in
-                var out: [Int] = []
-                var from = 0
-                while from <= d.count - nd.count,
-                      let hit = memmem(d.baseAddress! + from, d.count - from, nd.baseAddress!, nd.count) {
-                    let i = d.baseAddress!.distance(to: hit.assumingMemoryBound(to: UInt8.self))
-                    out.append(i)
-                    from = i + 1
-                }
-                return out
+        // memmem 是 GNU/POSIX 扩展，Windows 上没有；这里用纯 Swift 数组扫描实现等价查找
+        var out: [Int] = []
+        var from = 0
+        let lastStart = bytes.count - needle.count
+        scan: while from <= lastStart {
+            for j in 0..<needle.count where bytes[from + j] != needle[j] {
+                from += 1
+                continue scan
             }
+            out.append(from)
+            from += 1
         }
+        return out
     }
 }
+
+#if os(Windows)
+/// The MSVC C runtime has no memmem.
+private func memmem(_ big: UnsafeRawPointer, _ bigLen: Int,
+                    _ little: UnsafeRawPointer, _ littleLen: Int) -> UnsafeMutableRawPointer? {
+    guard littleLen > 0, bigLen >= littleLen else { return nil }
+    let b = big.assumingMemoryBound(to: UInt8.self)
+    let l = little.assumingMemoryBound(to: UInt8.self)
+    var i = 0
+    while i <= bigLen - littleLen {
+        if b[i] == l[0] {
+            var j = 1
+            while j < littleLen && b[i + j] == l[j] { j += 1 }
+            if j == littleLen { return UnsafeMutableRawPointer(mutating: big + i) }
+        }
+        i += 1
+    }
+    return nil
+}
+#endif
 
 /// Minimal GDB remote serial protocol client.
 final class GDBRemote {

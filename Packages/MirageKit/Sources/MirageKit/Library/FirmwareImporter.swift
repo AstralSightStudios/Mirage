@@ -18,7 +18,7 @@ public struct FirmwareImporter: Sendable {
     /// update scripts, and the package's main_res files. Band 9 and Band 10
     /// build their /system partition from main_res (ota.json names them).
     static func keptNames(in root: URL) -> Set<String> {
-        var names: Set<String> = ["ota.json", "ota.sh", "META-INF"]
+        var names: Set<String> = ["ota.json", "ota.sh", "META-INF", "system"]
         let manifest = root.appendingPathComponent("ota.json")
         if let data = try? Data(contentsOf: manifest),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -121,17 +121,23 @@ public struct FirmwareImporter: Sendable {
         return hits[0]
     }
 
-    /// Unpacks with unzip (ditto rejects the archive's streamed entries);
-    /// progress from the unpacked bytes against the
-    /// sizes in the archive's central directory.
+    /// Unpacks with unzip (ditto rejects the archive's streamed entries;
+    /// Windows has bsdtar instead); progress from the unpacked bytes against
+    /// the sizes in the archive's central directory.
     static func unzip(_ archive: URL, into dir: URL, progress: ImageBuilder.Progress?) async throws {
         let total = (try? ZipDirectory.uncompressedSize(of: archive)) ?? 0
         guard total > 0 else {
             throw MirageError.invalid("\(archive.lastPathComponent) is not a ZIP firmware package")
         }
         let p = Process()
+        #if os(Windows)
+        let system = ProcessInfo.processInfo.environment["SystemRoot"] ?? "C:\\Windows"
+        p.executableURL = URL(fileURLWithPath: system).appendingPathComponent("System32/tar.exe")
+        p.arguments = ["-x", "-f", archive.path, "-C", dir.path]
+        #else
         p.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
         p.arguments = ["-q", "-o", archive.path, "-d", dir.path]
+        #endif
         let err = Pipe()
         p.standardError = err
         p.standardOutput = FileHandle.nullDevice

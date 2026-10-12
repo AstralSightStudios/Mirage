@@ -91,11 +91,12 @@ public struct DeviceStorage: Sendable {
                 try ImageBuilder.buildNAND(at: paths.nand, spec: nand, resource: resource,
                                            systemDir: fwDir, progress: progress)
             }
-            try BindSeed.apply(to: paths.nand, spec: nand, binding: device.binding, profileID: profile.id)
+            let btDatabase = BindSeed.btDatabase(firmwareDirectory: fwDir)
+            try BindSeed.apply(to: paths.nand, spec: nand, binding: device.binding, btDatabase: btDatabase)
             if device.binding.bound {
                 let abDir = paths.astrobox
                 try? FileManager.default.createDirectory(at: abDir, withIntermediateDirectories: true)
-                let lk = BindSeed.linkKey(for: profile.id)
+                let lk = BindSeed.linkKey(database: btDatabase)
                 let line = "\(device.identity.bluetoothAddress)=\(lk)\n"
                 try? line.data(using: .utf8)?.write(to: abDir.appendingPathComponent("link-keys"))
             }

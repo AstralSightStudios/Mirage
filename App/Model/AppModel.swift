@@ -1,7 +1,6 @@
 import Foundation
 import MirageKit
 import Observation
-import SwiftUI
 
 /// Library state shared by every window: devices, firmware, profiles,
 /// running sessions and background jobs.
