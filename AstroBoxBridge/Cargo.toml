@@ -26,9 +26,3 @@ zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [profile.release]
 panic = "unwind"
-
-# frontbridge (pulled in by `bluetooth`) has a Linux-only path dependency on
-# `../../vendor/tauri-runtime-cef`, which the Mirage submodule layout does not
-# carry. Point that path source at an empty stub so the graph resolves.
-[patch."file:///Volumes/EXT0/Mirage/External/AstroBox/vendor/tauri-runtime-cef"]
-tauri-runtime-cef = { path = "stubs/tauri-runtime-cef" }

@@ -1,0 +1,12 @@
+# Placeholder for AstroBox's vendored CEF runtime, at the path frontbridge's
+# manifest names. frontbridge only uses it on Linux (`cfg(target_os =
+# "linux")`), so it is never compiled for macOS or Windows; it only has to
+# exist for Cargo to resolve the dependency graph.
+[package]
+name = "tauri-runtime-cef"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "src/lib.rs"
