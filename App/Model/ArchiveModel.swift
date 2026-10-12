@@ -160,6 +160,18 @@ enum Format {
     }
 
     static func relative(_ d: Date) -> String {
-        RelativeDateTimeFormatter().localizedString(for: d, relativeTo: Date())
+        #if canImport(Darwin)
+        return RelativeDateTimeFormatter().localizedString(for: d, relativeTo: Date())
+        #else
+        // swift-corelibs-foundation has no RelativeDateTimeFormatter
+        let s = Int(Date().timeIntervalSince(d))
+        let (n, unit): (Int, String) = switch abs(s) {
+        case ..<60: (abs(s), "sec.")
+        case ..<3600: (abs(s) / 60, "min.")
+        case ..<86400: (abs(s) / 3600, "hr.")
+        default: (abs(s) / 86400, abs(s) / 86400 == 1 ? "day" : "days")
+        }
+        return s >= 0 ? "\(n) \(unit) ago" : "in \(n) \(unit)"
+        #endif
     }
 }

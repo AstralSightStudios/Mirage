@@ -129,8 +129,8 @@ jobs:
       - name: Build Mirage.app
         run: |
           xcodebuild -project Mirage.xcodeproj -scheme Mirage -configuration Release \
-            -derivedDataPath .build/xcode -destination 'generic/platform=macOS' \
-            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= build
+            -derivedDataPath .build/xcode -destination 'platform=macOS,arch=arm64' \
+            ARCHS=arm64 CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= build
       - name: Package
         run: |
           mkdir -p dist
