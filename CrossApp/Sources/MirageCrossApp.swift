@@ -52,6 +52,12 @@ struct MirageCrossApp: App {
         .defaultSize(width: 900, height: 520)
         .defaultLaunchBehavior(.suppressed)
 
+        Window("Files", id: "files") {
+            FilesWindow(model: model)
+        }
+        .defaultSize(width: 1000, height: 640)
+        .defaultLaunchBehavior(.suppressed)
+
         Window("Settings", id: "settings") {
             SettingsView(model: model)
         }

@@ -299,6 +299,14 @@ final class FileBrowser {
         }
     }
 
+    /// Saves one file under the name a save dialog chose.
+    func save(_ entry: GuestEntry, as url: URL) async {
+        guard let fs else { return }
+        await run("Saving \(entry.name)") { progress in
+            try await fs.read(entry.path, progress: progress).write(to: url)
+        }
+    }
+
     private nonisolated static func copyOut(_ entry: GuestEntry, to url: URL, fs: GuestFileSystem,
                                             progress: @escaping @Sendable (Double) -> Void) async throws {
         if entry.isDirectory {

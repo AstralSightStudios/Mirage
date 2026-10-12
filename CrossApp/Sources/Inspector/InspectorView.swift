@@ -144,6 +144,8 @@ struct StorageTab: View {
     @State var confirmErase = false
     @Environment(\.revealFile) var revealFile
 
+    @Environment(\.openWindow) var openWindow
+
     var body: some View {
         let profile = model.profile(device.profileID)
         let images = profile.map { DeviceStorage(library: model.library).images(of: device, profile: $0) } ?? []
@@ -156,6 +158,12 @@ struct StorageTab: View {
                     Footnote(job.detail)
                 }
             }
+            HStack {
+                Button("Browse Files…") { openWindow(id: "files") }
+                Footnote(active ? "The running device's file tree, through its shell"
+                         : "/data and the romfs partitions, from the storage images")
+            }
+            .padding(.top, 8)
             InspectorSection("Images") {
                 ForEach(images) { img in
                     VStack(alignment: .leading, spacing: 2) {

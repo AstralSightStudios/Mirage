@@ -151,6 +151,7 @@ struct StateDot: View {
 // MARK: - Device toolbar
 
 struct DeviceToolbar: View {
+    @Environment(\.openWindow) var openWindow
     var model: AppModel
     let device: VirtualDevice
     @Binding var showConsole: Bool
@@ -201,6 +202,7 @@ struct DeviceToolbar: View {
             Divider().frame(height: 20)
             Button("Settings") { showSettings = true }
             Button(showConsole ? "Hide Console" : "Console") { showConsole.toggle() }
+            Button("Files") { openWindow(id: "files") }
             Button(showInspector ? "Hide Inspector" : "Inspector") { showInspector.toggle() }
         }
         .padding(.horizontal, 12)
