@@ -1,6 +1,9 @@
 import Foundation
 import MirageKit
 import Observation
+#if canImport(CMirageAstroBox)
+import CMirageAstroBox
+#endif
 
 /// The companion core, linked in as a Rust static library (AstroBoxBridge/),
 /// talking to the emulated band over its Bluetooth bridge: device info,
