@@ -22,8 +22,8 @@ export PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig
 
 # Prefer Apple clang on macOS so cross-compilers in PATH (e.g. Android NDK) don't hijack host builds
 if [ "$(uname -s)" = "Darwin" ]; then
-    CC=${CC:-$(xcrun -find clang 2>/dev/null || echo "/usr/bin/clang")}
-    CXX=${CXX:-$(xcrun -find clang++ 2>/dev/null || echo "/usr/bin/clang++")}
+    CC=${CC:-/usr/bin/clang}
+    CXX=${CXX:-/usr/bin/clang++}
     OBJCC=${OBJCC:-$CC}
     export CC CXX OBJCC
 fi
