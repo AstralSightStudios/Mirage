@@ -252,7 +252,7 @@ public extension DeviceProfile {
         chip: "best1503",
         qemuBoard: "p67",
         productPrefixes: ["miwear.watch.p67"],
-        screen: .init(width: 336, height: 480, shape: .roundedRect, cornerRadius: 64),
+        screen: .init(width: 336, height: 480, shape: .roundedRect, cornerRadius: 48),
         buttons: [],
         storage: .init(
             mainNOR: true,
@@ -304,7 +304,7 @@ public extension DeviceProfile {
         chip: "best1503",
         qemuBoard: "q66",
         productPrefixes: ["miwear.watch.q66"],
-        screen: .init(width: 212, height: 520, shape: .roundedRect, cornerRadius: 40),
+        screen: .init(width: 212, height: 520, shape: .roundedRect, cornerRadius: 104),
         buttons: [],
         storage: .init(
             mainNOR: true,
@@ -316,7 +316,7 @@ public extension DeviceProfile {
         consoleUART: 2,
         defaults: .init(didPrefix: "150", psnPrefix: "QEMU1503"),
         accent: "#5AC8FA",
-        notes: "Panel 212x520, CST92xx touch, SPI NAND (resource romfs + /data). No physical buttons. Corner radius is estimated.",
+        notes: "Panel 212x520, CST92xx touch, SPI NAND (resource romfs + /data). No physical buttons.",
         builtin: true)
 
     /// Xiaomi Smart Band 9: board "n66" (best1503), 192x490 panel. The
@@ -328,7 +328,7 @@ public extension DeviceProfile {
         chip: "best1503",
         qemuBoard: "n66",
         productPrefixes: ["miwear.watch.n66"],
-        screen: .init(width: 192, height: 490, shape: .roundedRect, cornerRadius: 36),
+        screen: .init(width: 192, height: 490, shape: .roundedRect, cornerRadius: 96),
         buttons: [],
         storage: .init(
             mainNOR: true,
@@ -340,7 +340,7 @@ public extension DeviceProfile {
         consoleUART: 2,
         defaults: .init(didPrefix: "150", psnPrefix: "QEMU1503"),
         accent: "#34C759",
-        notes: "Panel 192x490, Hynitron CST92xx touch, SPI NAND (yaffs /system + /data). No physical buttons. Corner radius is estimated.",
+        notes: "Panel 192x490, Hynitron CST92xx touch, SPI NAND (yaffs /system + /data). No physical buttons.",
         builtin: true)
 
     /// Xiaomi Smart Band 10: board "o66" (best1503), 212x520 panel.
@@ -351,7 +351,7 @@ public extension DeviceProfile {
         chip: "best1503",
         qemuBoard: "o66",
         productPrefixes: ["miwear.watch.o66"],
-        screen: .init(width: 212, height: 520, shape: .roundedRect, cornerRadius: 40),
+        screen: .init(width: 212, height: 520, shape: .roundedRect, cornerRadius: 104),
         buttons: [],
         storage: .init(
             mainNOR: true,
@@ -363,11 +363,10 @@ public extension DeviceProfile {
         consoleUART: 2,
         defaults: .init(didPrefix: "150", psnPrefix: "QEMU1503"),
         accent: "#FF9F0A",
-        notes: "Panel 212x520, CST9217M touch, SPI NAND (yaffs /system + /data). No physical buttons. Corner radius is estimated.",
+        notes: "Panel 212x520, CST9217M touch, SPI NAND (yaffs /system + /data). No physical buttons.",
         builtin: true)
 
-    /// Xiaomi Smart Band 9 Pro: board "n67" (best1503). The panel size is the
-    /// firmware's own choice for its rm690c0 driver; the corner radius is estimated.
+    /// Xiaomi Smart Band 9 Pro: board "n67" (best1503).
     static let n67 = DeviceProfile(
         id: "n67",
         name: "Xiaomi Smart Band 9 Pro",
@@ -375,7 +374,7 @@ public extension DeviceProfile {
         chip: "best1503",
         qemuBoard: "n67",
         productPrefixes: ["miwear.watch.n67"],
-        screen: .init(width: 336, height: 480, shape: .roundedRect, cornerRadius: 40),
+        screen: .init(width: 336, height: 480, shape: .roundedRect, cornerRadius: 48),
         buttons: [],
         storage: .init(
             mainNOR: true,
