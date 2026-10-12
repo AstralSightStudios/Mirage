@@ -20,17 +20,29 @@ enum BindSeed {
         Key(name: "persist.miwear_seqnum", template: "1") { $0.seqnum },
     ]
 
-    public static func linkKey(for profileID: String) -> String {
-        profileID == "n66" ? "fcd5cb68f9497e4a323dccf1583496ef" : "f3f7259bdd62752b186ea0a7c5108bfd"
+    /// The Bluetooth bond database the firmware opens: Band 9 and Band 9 Pro
+    /// (3.1.x) keep link keys in bt_config.db (key_btbond), later bands in
+    /// bt_storage.db (BtBonded).
+    static func btDatabase(firmwareDirectory: URL) -> String {
+        let ap = firmwareDirectory.appendingPathComponent("vela_ap.bin")
+        if let image = try? Data(contentsOf: ap, options: .alwaysMapped),
+           image.range(of: Data("/data/misc/bt/bt_config.db".utf8)) != nil {
+            return "bt_config.db"
+        }
+        return "bt_storage.db"
+    }
+
+    /// The link key stored in that database's template.
+    static func linkKey(database: String) -> String {
+        database == "bt_config.db" ? "fcd5cb68f9497e4a323dccf1583496ef" : "f3f7259bdd62752b186ea0a7c5108bfd"
     }
 
     /// Writes the bond databases into the data partition, which starts at
     /// `spec.systemPages` (Band 9 / Band 10 layout) and is still erased.
-    public static func apply(to nandURL: URL, spec: NANDSpec, binding: BindInfo, profileID: String = "") throws {
+    static func apply(to nandURL: URL, spec: NANDSpec, binding: BindInfo, btDatabase btFile: String) throws {
         guard binding.bound, let dataFirst = spec.systemPages else { return }
         let persist = try persistDatabase(for: binding)
         let record = try recordDatabase(for: binding)
-        let btFile = profileID == "n66" ? "bt_config.db" : "bt_storage.db"
         let btData = try template(btFile)
         let objects: [Object] = [
             .directory(oid: 258, parent: 1, name: "misc"),
