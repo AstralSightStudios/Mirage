@@ -1,7 +1,8 @@
 // swift-tools-version: 6.0
-// The SwiftCrossUI front-end of Mirage for Windows and Linux (GtkBackend; it
-// also runs on macOS to preview that UI). The shipped macOS app is the SwiftUI
-// one in Mirage.xcodeproj. Both compile the same models from App/Model.
+// The SwiftCrossUI front-end of Mirage for Windows (WinUIBackend) and Linux
+// (GtkBackend; the GTK build also runs on macOS to preview the UI). The shipped
+// macOS app is the SwiftUI one in Mirage.xcodeproj. Both compile the same
+// models from App/Model.
 import PackageDescription
 
 let root = Context.packageDirectory
@@ -30,7 +31,10 @@ let package = Package(
             dependencies: [
                 .product(name: "MirageKit", package: "MirageKit"),
                 .product(name: "SwiftCrossUI", package: "swift-cross-ui"),
-                .product(name: "GtkBackend", package: "swift-cross-ui"),
+                .product(name: "GtkBackend", package: "swift-cross-ui",
+                         condition: .when(platforms: [.macOS, .linux])),
+                .product(name: "WinUIBackend", package: "swift-cross-ui",
+                         condition: .when(platforms: [.windows])),
                 .target(name: "CMirageAstroBox", condition: withCompanionCore),
             ],
             path: ".",

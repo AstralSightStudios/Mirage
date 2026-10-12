@@ -1,6 +1,11 @@
-import GtkBackend
 import MirageKit
 import SwiftCrossUI
+// The backend module's App extension picks the backend.
+#if os(Windows)
+import WinUIBackend
+#else
+import GtkBackend
+#endif
 
 @main
 struct MirageCrossApp: App {
