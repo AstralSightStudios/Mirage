@@ -20,12 +20,15 @@ try {
     # The static library imports Windows APIs through windows-targets' import
     # libraries (windows.0.48.5.lib, windows.0.52.0.lib, ...); put them next to
     # it so the Swift link (-L AstroBoxBridge\target\release) finds them.
+    # Found by globbing the cargo registry instead of `cargo metadata`, whose
+    # JSON needs ConvertFrom-Json -AsHashtable (PowerShell 6+ only) because it
+    # has keys that differ only in case (USB / usb).
     $out = Join-Path $bridge 'target\release'
-    # -AsHashtable: the metadata has keys that differ only in case (USB / usb)
-    $metadata = cargo metadata --format-version 1 | ConvertFrom-Json -AsHashtable
+    $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $HOME '.cargo' }
     $copied = 0
-    foreach ($pkg in $metadata.packages | Where-Object { $_.name -eq 'windows_x86_64_msvc' }) {
-        $libDir = Join-Path (Split-Path $pkg.manifest_path) 'lib'
+    foreach ($libDir in Get-ChildItem (Join-Path $cargoHome 'registry\src') -Directory |
+        ForEach-Object { Get-ChildItem $_.FullName -Directory -Filter 'windows_x86_64_msvc-*' } |
+        ForEach-Object { Join-Path $_.FullName 'lib' }) {
         foreach ($lib in Get-ChildItem $libDir -Filter '*.lib' -ErrorAction SilentlyContinue) {
             Copy-Item $lib.FullName $out -Force
             $copied++
