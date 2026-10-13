@@ -95,6 +95,7 @@ async fn handle(id: u64, method: &str, params: Value) -> Result<Value, String> {
         "quickApps" => ops::quick_apps().await,
         "launchQuickApp" => ops::launch_quick_app(parse(params)?).await,
         "removeQuickApp" => ops::remove_quick_app(parse(params)?).await,
+        "sendNotification" => ops::send_notification(parse(params)?).await,
         "" => Err("missing method name".to_string()),
         other => Err(format!("unknown method `{other}`")),
     }

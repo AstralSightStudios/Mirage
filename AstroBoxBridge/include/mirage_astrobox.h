@@ -37,6 +37,9 @@
  *   quickApps    {} → [{packageName, name, version, canRemove, fingerprint}]
  *   launchQuickApp {packageName, page?=""} → null
  *   removeQuickApp {packageName} → null
+ *   sendNotification {title, text?="", subTitle?="", appName?="Mirage", source?="mirage", id?=0}
+ *                → null once queued (the band does not acknowledge); the same
+ *                source and id replace an earlier notification
  *
  * Device = {name, addr, serialNumber, firmwareVersion, model, productDevice,
  *           battery?: {level, chargeStatus:"unknown|charging|notCharging|full"}}

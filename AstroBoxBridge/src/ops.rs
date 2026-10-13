@@ -348,3 +348,50 @@ pub async fn remove_quick_app(p: QuickAppParams) -> Result<Value, String> {
         }
     }
 }
+
+// ------------------------------------------------------------ notifications
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationParams {
+    /// Namespace the band groups the notification under (one "app" per source).
+    #[serde(default = "default_notification_source")]
+    source: String,
+    /// Reusing an id replaces that notification.
+    #[serde(default)]
+    id: u32,
+    #[serde(default = "default_notification_app")]
+    app_name: String,
+    title: String,
+    #[serde(default)]
+    sub_title: String,
+    #[serde(default)]
+    text: String,
+}
+
+fn default_notification_source() -> String {
+    "mirage".into()
+}
+
+fn default_notification_app() -> String {
+    "Mirage".into()
+}
+
+pub async fn send_notification(p: NotificationParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    let timestamp_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or_default();
+    let content = corelib::device::notification::NotificationContent {
+        id: p.id,
+        app_name: p.app_name,
+        title: p.title,
+        sub_title: p.sub_title,
+        text: p.text,
+        timestamp_ms,
+        live_activity: None,
+    };
+    corelib::device::notification::send(addr, p.source, content).await.map_err(|e| format!("{e:#}"))?;
+    Ok(Value::Null)
+}
