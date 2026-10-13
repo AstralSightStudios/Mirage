@@ -56,6 +56,9 @@ public enum ImageBuilder {
         if part.isRawInfo {
             return try RawInfo.partition(part, properties: properties)
         }
+        if part.isP65Record {
+            return try P65Record.partition(part, properties: properties)
+        }
         let text = Data(factoryText(properties).utf8)
         var image = Data(count: part.size)
         var geo = geometry(part)
@@ -99,6 +102,9 @@ public enum ImageBuilder {
         }
         if part.isRawInfo {
             return try RawInfo.properties(in: region)
+        }
+        if part.isP65Record {
+            return try P65Record.properties(in: region)
         }
         var geo = geometry(part)
         var out = [UInt8](repeating: 0, count: 64 << 10)
@@ -790,4 +796,68 @@ enum Yaffs2 {
     }
 
     static func le32(_ v: UInt32) -> [UInt8] { withUnsafeBytes(of: v.littleEndian) { Array($0) } }
+}
+
+enum P65Record {
+    static let size = 256
+    static let mac = (offset: 8, length: 6)
+    static let did = (offset: 14, length: 8)
+    static let key = (offset: 22, length: 16)
+    static let psn = (offset: 39, length: 20)
+    static let fsn = (offset: 63, length: 14)
+    static let sku = (offset: 77, length: 9)
+
+    static func partition(_ part: FactoryPartition, properties: [FactoryIdentity.Property]) throws -> Data {
+        func value(_ key: String) -> String? { properties.first { $0.key == key }?.value }
+        guard let didStr = value("ro.factory.did"), let didVal = UInt64(didStr) else {
+            throw MirageError.invalid("The p65 factory record needs a numeric device ID")
+        }
+        guard let psn = value("ro.factory.psn"), !psn.isEmpty else {
+            throw MirageError.invalid("The p65 factory record needs a serial (ro.factory.psn)")
+        }
+        guard let mac = value("ro.factory.mac_bt"), FactoryIdentity.isValidAddress(mac) else {
+            throw MirageError.invalid("The p65 factory record needs a Bluetooth address (XX:XX:XX:XX:XX:XX)")
+        }
+        let keyValue = value("ro.factory.key") ?? "0123456789ABCDEF"
+        let fsnValue = value("ro.factory.fsn") ?? "QEMU1502P00001"
+        let skuValue = value("ro.factory.sku") ?? "M2509W1"
+
+        var record = Data(repeating: 0, count: max(size, part.size))
+        func put(_ bytes: [UInt8], at field: (offset: Int, length: Int), padWith: UInt8 = 0) {
+            var slice = Array(bytes.prefix(field.length))
+            if slice.count < field.length {
+                slice += [UInt8](repeating: padWith, count: field.length - slice.count)
+            }
+            record.replaceSubrange(field.offset..<(field.offset + field.length), with: slice)
+        }
+        put(Array(mac.split(separator: ":").compactMap { UInt8($0, radix: 16) }), at: Self.mac)
+        let didBE = withUnsafeBytes(of: didVal.bigEndian) { Array($0) }
+        put(didBE, at: Self.did)
+        put(Array(keyValue.utf8), at: Self.key, padWith: UInt8(ascii: "0"))
+        put(Array(psn.utf8), at: Self.psn)
+        put(Array(fsnValue.utf8), at: Self.fsn)
+        put(Array(skuValue.utf8), at: Self.sku)
+        return record
+    }
+
+    static func properties(in region: Data) throws -> [FactoryIdentity.Property] {
+        guard region.count >= size else { throw MirageError.io("No factory record in the partition") }
+        let macBytes = region.subdata(in: mac.offset..<(mac.offset + mac.length))
+        let macText = macBytes.map { String(format: "%02X", $0) }.joined(separator: ":")
+        let didVal = region.subdata(in: did.offset..<(did.offset + did.length)).withUnsafeBytes {
+            $0.load(as: UInt64.self).bigEndian
+        }
+        func text(_ field: (offset: Int, length: Int)) -> String {
+            let bytes = region.subdata(in: field.offset..<(field.offset + field.length)).prefix { $0 != 0 }
+            return String(decoding: bytes, as: UTF8.self)
+        }
+        return [
+            .init(key: "ro.factory.did", value: String(didVal)),
+            .init(key: "ro.factory.psn", value: text(psn)),
+            .init(key: "ro.factory.mac_bt", value: macText),
+            .init(key: "ro.factory.key", value: text(key)),
+            .init(key: "ro.factory.fsn", value: text(fsn)),
+            .init(key: "ro.factory.sku", value: text(sku)),
+        ]
+    }
 }

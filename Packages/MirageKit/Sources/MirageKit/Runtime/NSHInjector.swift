@@ -66,19 +66,22 @@ public enum NSHInjector {
     // MARK: Image analysis (as emu/nsh.py)
 
     static func builtin(_ img: FirmwareLayout, _ name: String) throws -> (UInt32, UInt32) {
-        let top = UInt8(img.xip >> 24)
+        var tops = Set<UInt8>([UInt8(img.xip >> 24)])
+        for cp in img.copies {
+            tops.insert(UInt8((cp.vma &- 0x20000000) >> 24))
+        }
         let want = Array(name.utf8)
         // NuttX g_builtins entries: {name, priority, stack size, main};
         // runs of at least eight in a row
         let tables: [(Int, Int)] = img.bytes.withUnsafeBufferPointer { d in
             func isEntry(_ s: Int) -> Bool {
                 s + 16 <= d.count && d[s + 5] == 0 && d[s + 6] == 0 && d[s + 7] == 0
-                    && d[s + 10] <= 0x0F && d[s + 11] == 0 && d[s + 15] == top
+                    && d[s + 10] <= 0x0F && d[s + 11] == 0 && tops.contains(d[s + 15])
             }
             var out: [(Int, Int)] = []
             var s = 0
             while s + 16 * 8 <= d.count {
-                if d[s + 15] != top || d[s + 11] != 0 {
+                if !tops.contains(d[s + 15]) || d[s + 11] != 0 {
                     s += 1
                     continue
                 }
@@ -193,15 +196,16 @@ public enum NSHInjector {
                 let v = base &+ UInt32(i)
                 let lit = [UInt8(v & 0xFF), UInt8((v >> 8) & 0xFF), UInt8((v >> 16) & 0xFF), UInt8(v >> 24)]
                 for j in img.find(lit) where j % 4 == 0 {
-                    sites.insert(img.xip &+ UInt32(j))
+                    sites.insert(img.runAddr(of: j))
                 }
             }
         }
         var found = Set<[UInt32]>()
         for lit in sites {
-            var pc = max(img.xip, lit &- 1020) & ~1
+            var pc = (lit &- 1020) & ~1
             while pc < lit {
                 defer { pc += 2 }
+                guard img.offset(of: pc) != nil else { continue }
                 guard let h = img.u16(addr: pc), h & 0xFF00 == 0x4800,
                       ((pc + 4) & ~3) + UInt32(h & 0xFF) * 4 == lit else { continue }
                 var at = pc + 2
@@ -224,9 +228,16 @@ public enum NSHInjector {
 
 /// Firmware image layout, parsed as hw/misc/bes_image.c does.
 final class FirmwareLayout {
+    struct CopySection {
+        let start: Int
+        let end: Int
+        let vma: UInt32
+    }
+
     let bytes: [UInt8]
     let xip: UInt32
     var aliases: [UInt32]
+    var copies: [CopySection] = []
     /// Length of the printable run starting at each byte (capped at 255).
     lazy var printableRuns: [UInt8] = {
         var r = [UInt8](repeating: 0, count: bytes.count + 1)
@@ -260,7 +271,27 @@ final class FirmwareLayout {
             cfg[key] = s.hasPrefix("0x") ? UInt32(s.dropFirst(2), radix: 16) : UInt32(s)
         }
         let ota = cfg["OTA_CODE_OFFSET"] ?? 0
-        aliases = [xip, (cfg["FLASH_BASE"] ?? 0) &+ ota, (cfg["FLASH_NC_BASE"] ?? 0) &+ ota]
+        let cached = (cfg["FLASH_BASE"] ?? 0) &+ ota
+        aliases = [xip, cached, (cfg["FLASH_NC_BASE"] ?? 0) &+ ota]
+        for o in stride(from: 0, to: min(0x4000, bytes.count - 12), by: 4) {
+            let lma = u32(at: o), vma = u32(at: o + 4), end = u32(at: o + 8)
+            if vma == 0x3C000000 && cached <= lma && lma < end && end <= cached &+ UInt32(bytes.count) {
+                copies.append(CopySection(start: Int(lma &- cached), end: Int(end &- cached), vma: vma))
+            }
+        }
+        for cp in copies {
+            aliases.append(cp.vma &- UInt32(cp.start))
+            aliases.append(cp.vma &- 0x20000000 &- UInt32(cp.start))
+        }
+    }
+
+    func runAddr(of off: Int) -> UInt32 {
+        for cp in copies {
+            if cp.start <= off && off < cp.end {
+                return cp.vma &- 0x20000000 &+ UInt32(off - cp.start)
+            }
+        }
+        return xip &+ UInt32(off)
     }
 
     func u32(at off: Int) -> UInt32 {
@@ -268,6 +299,13 @@ final class FirmwareLayout {
     }
 
     func offset(of addr: UInt32) -> Int? {
+        for cp in copies {
+            for base in [cp.vma, cp.vma &- 0x20000000] {
+                if base <= addr && addr < base &+ UInt32(cp.end - cp.start) {
+                    return Int(addr - base) + cp.start
+                }
+            }
+        }
         for base in aliases where base <= addr && UInt64(addr) < UInt64(base) + UInt64(bytes.count) {
             return Int(addr - base)
         }

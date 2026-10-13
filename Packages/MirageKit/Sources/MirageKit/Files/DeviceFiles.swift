@@ -30,7 +30,7 @@ public enum DeviceFiles {
     /// rpmsgfs mounts of cores the emulator does not run (Watch S5's audio
     /// DSP at /mnt/audio) never answer.
     public static func unstatableDirectories(profile: DeviceProfile) -> Set<String> {
-        profile.storage.emmc != nil ? ["/mnt"] : []
+        (profile.storage.emmc != nil || profile.chip == "best1502p") ? ["/mnt"] : []
     }
 
     public static func volumes(of device: VirtualDevice, profile: DeviceProfile, library: MirageLibrary) -> [DeviceVolume] {

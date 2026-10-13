@@ -40,7 +40,8 @@ enum BindSeed {
     /// Writes the bond databases into the data partition, which starts at
     /// `spec.systemPages` (Band 9 / Band 10 layout) and is still erased.
     static func apply(to nandURL: URL, spec: NANDSpec, binding: BindInfo, btDatabase btFile: String) throws {
-        guard binding.bound, let dataFirst = spec.systemPages else { return }
+        guard binding.bound else { return }
+        let dataFirst = spec.dataFirstPage
         let persist = try persistDatabase(for: binding)
         let record = try recordDatabase(for: binding)
         let btData = try template(btFile)

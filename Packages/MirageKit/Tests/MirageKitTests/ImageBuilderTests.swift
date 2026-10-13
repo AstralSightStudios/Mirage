@@ -62,3 +62,31 @@ import Testing
     }
     #expect(emitted == 3)
 }
+
+@Test func p65FactoryRoundTrip() throws {
+    let part = DeviceProfile.p65.storage.factory
+    let props: [FactoryIdentity.Property] = [
+        .init(key: "ro.factory.did", value: "1502000001"),
+        .init(key: "ro.factory.psn", value: "QEMU1502P00001"),
+        .init(key: "ro.factory.mac_bt", value: "C0:FF:EE:15:02:01"),
+        .init(key: "ro.factory.key", value: "0123456789ABCDEF"),
+        .init(key: "ro.factory.fsn", value: "QEMU1502P00001"),
+        .init(key: "ro.factory.sku", value: "M2509W1"),
+    ]
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("mirage-test-p65-nor.img")
+    try ImageBuilder.createErasedNOR(at: url, size: 0x100_0000)
+    defer { try? FileManager.default.removeItem(at: url) }
+    try ImageBuilder.writeFactory(into: url, part: part, properties: props)
+    let readBack = try ImageBuilder.readFactory(from: url, part: part)
+    #expect(readBack == props)
+}
+
+@Test func p65NSHInjectorPlan() throws {
+    let fwURL = URL(fileURLWithPath: "/Volumes/EXT0/GitHub/qemu-miwear/miwear.watch.p65_v3.100.043_full_662aa7db/vela_ap.bin")
+    guard FileManager.default.fileExists(atPath: fwURL.path) else { return }
+    let plan = try NSHInjector.plan(firmware: fwURL)
+    #expect(plan.shMain == 0x0c5ad859)
+    #expect(plan.shName == 0x3c181fac)
+    #expect(plan.call == 0x0c4c3002)
+    #expect(plan.spawn == 0x0c4c96f4)
+}

@@ -170,6 +170,8 @@ public struct FactoryPartition: Codable, Hashable, Sendable {
         /// reads from /dev/factory: magic 0x9A55, CRC32 of the body, then
         /// the device fields at fixed offsets (see ImageBuilder.rawInfo).
         case rawInfo
+        /// 256-byte fixed binary factory record (best1502p REDMI Watch 6, p65).
+        case p65Record
     }
 
     public init(flash: Flash, offset: Int, blockSize: Int, blockCount: Int, ioSize: Int,
@@ -186,6 +188,7 @@ public struct FactoryPartition: Codable, Hashable, Sendable {
 
     public var size: Int { blockSize * blockCount }
     public var isRawInfo: Bool { format == .rawInfo }
+    public var isP65Record: Bool { format == .p65Record }
 }
 
 public struct NANDSpec: Codable, Hashable, Sendable {
@@ -397,5 +400,31 @@ public extension DeviceProfile {
         notes: "Panel 336x480 (rm690c0 driver), Hynitron CST92xx touch on I2C5, W1150 light sensor on I2C5, SPI NAND (yaffs /system + /data). No physical buttons.",
         builtin: true)
 
-    static let builtins: [DeviceProfile] = [.p67, .q63, .q66, .n66, .o66, .n67]
+    /// REDMI Watch 6: board "p65" (best1502p), 432x514 panel.
+    static let p65 = DeviceProfile(
+        id: "p65",
+        name: "REDMI Watch 6",
+        family: .watch,
+        chip: "best1502p",
+        qemuBoard: "p65",
+        productPrefixes: ["miwear.watch.p65"],
+        screen: .init(width: 432, height: 514, shape: .roundedRect, cornerRadius: 48),
+        buttons: [
+            .init(id: "home", title: "Upper Button", qcode: "home", placement: .rightUpper, symbol: "button.horizontal.top.press"),
+            .init(id: "down", title: "Power Key", qcode: "pgdn", placement: .rightLower, symbol: "button.horizontal.top.press"),
+        ],
+        storage: .init(
+            mainNOR: true,
+            nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
+                        resourceImage: "vela_resource.bin", resourceFirstPage: 0,
+                        resourcePages: 112640, dataPages: 149504),
+            factory: .init(flash: .mainNOR, offset: 0xCC0000, blockSize: 256,
+                           blockCount: 1, ioSize: 256, diskVersion: 0, format: .p65Record)),
+        consoleUART: 1,
+        defaults: .init(didPrefix: "1502", psnPrefix: "QEMU1502"),
+        accent: "#FF5722",
+        notes: "Panel 432x514 (rm690c0 driver), Zinitix touch on I2C5, SPI NAND (resource romfs + /data).",
+        builtin: true)
+
+    static let builtins: [DeviceProfile] = [.p67, .q63, .q66, .n66, .o66, .n67, .p65]
 }

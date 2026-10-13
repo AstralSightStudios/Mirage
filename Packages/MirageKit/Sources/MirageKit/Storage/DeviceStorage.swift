@@ -92,7 +92,9 @@ public struct DeviceStorage: Sendable {
                                            systemDir: fwDir, progress: progress)
             }
             let btDatabase = BindSeed.btDatabase(firmwareDirectory: fwDir)
-            try BindSeed.apply(to: paths.nand, spec: nand, binding: device.binding, btDatabase: btDatabase)
+            if profile.storage.factory.isRawInfo || profile.storage.factory.isP65Record {
+                try BindSeed.apply(to: paths.nand, spec: nand, binding: device.binding, btDatabase: btDatabase)
+            }
             if device.binding.bound {
                 let abDir = paths.astrobox
                 try? FileManager.default.createDirectory(at: abDir, withIntermediateDirectories: true)
