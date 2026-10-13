@@ -165,6 +165,27 @@ public final class QMPClient: @unchecked Sendable {
         try await execute("input-send-event", ["events": events])
     }
 
+    public func qomGet(_ path: String, _ property: String) async throws -> Any {
+        try await execute("qom-get", ["path": path, "property": property])
+    }
+
+    public func qomSet(_ path: String, _ property: String, _ value: Any) async throws {
+        try await execute("qom-set", ["path": path, "property": property, "value": value])
+    }
+
+    /// The emulated battery: charge (percent) and whether a charger is plugged in.
+    public func battery() async throws -> BatteryState {
+        let level = try await qomGet("/machine", "battery-level")
+        let charging = try await qomGet("/machine", "battery-charging")
+        return BatteryState(level: (level as? NSNumber)?.intValue ?? 0,
+                            charging: (charging as? NSNumber)?.boolValue ?? false)
+    }
+
+    public func setBattery(_ state: BatteryState) async throws {
+        try await qomSet("/machine", "battery-level", max(0, min(100, state.level)))
+        try await qomSet("/machine", "battery-charging", state.charging)
+    }
+
     public func screendump(to path: String) async throws {
         try await execute("screendump", ["filename": path, "format": "png"])
     }

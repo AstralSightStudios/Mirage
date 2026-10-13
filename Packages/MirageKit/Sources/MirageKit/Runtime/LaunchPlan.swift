@@ -140,6 +140,9 @@ public struct LaunchPlan: Sendable {
         if profile.storage.mainNOR { machine += ",flash-image=\(escape(paths.nor.path))" }
         if profile.storage.sensorNORSize != nil { machine += ",sensor-nor=\(escape(paths.sensorNOR.path))" }
         if profile.storage.nand != nil { machine += ",nand-image=\(escape(paths.nand.path))" }
+        if let battery = device.options.battery {
+            machine += ",battery-level=\(max(0, min(100, battery.level))),battery-charging=\(battery.charging ? "on" : "off")"
+        }
 
         let endpoints = try DeviceEndpoints.forHost(paths)
         var args = ["-M", machine, "-kernel", ap.path,

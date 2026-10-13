@@ -155,17 +155,18 @@ private struct StageZoomControls: View {
     }
 }
 
-private struct ScreenContent: View {
+struct ScreenContent: View {
     @Environment(AppModel.self) private var model
     let device: VirtualDevice
     let profile: DeviceProfile
     let session: DeviceSession
+    var onActivate: (() -> Void)?
 
     var body: some View {
         ZStack {
             Color.black
             if session.state.isActive {
-                ScreenView(session: session, profile: profile)
+                ScreenView(session: session, profile: profile, onActivate: onActivate)
                 if session.screenSize == nil || session.state == .launching {
                     BootingOverlay(text: session.state == .launching ? "Starting…" : "Connecting…")
                 }

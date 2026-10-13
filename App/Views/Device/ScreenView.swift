@@ -8,10 +8,13 @@ import SwiftUI
 struct ScreenView: NSViewRepresentable {
     let session: DeviceSession
     let profile: DeviceProfile
+    /// Called when the screen is clicked (before the touch goes out).
+    var onActivate: (() -> Void)?
 
     func makeNSView(context: Context) -> ScreenNSView {
         let v = ScreenNSView()
         v.attach(session, profile: profile)
+        v.onActivate = onActivate
         return v
     }
 
@@ -19,6 +22,7 @@ struct ScreenView: NSViewRepresentable {
         if v.session !== session || v.profile != profile {
             v.attach(session, profile: profile)
         }
+        v.onActivate = onActivate
     }
 
     static func dismantleNSView(_ v: ScreenNSView, coordinator: ()) {
@@ -38,6 +42,7 @@ final class ScreenNSView: NSView {
     private var lastTouchPt: (x: Int, y: Int)?
     private var lastTouchDown: Bool?
     private var lastTouchTime: TimeInterval = 0
+    var onActivate: (() -> Void)?
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -136,6 +141,7 @@ final class ScreenNSView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
+        onActivate?()
         fingerDown = true
         touch(panelPoint(event), down: true, force: true)
     }

@@ -21,6 +21,8 @@ final class AppModel {
 
     let archive: ArchiveModel
     let astrobox = AstroBoxService()
+    /// The multi-device canvas.
+    let workspace = WorkspaceModel()
 
     struct Job: Equatable {
         var title: String
@@ -40,6 +42,8 @@ final class AppModel {
         archive = ArchiveModel(library: lib)
         reload()
         archive.model = self
+        workspace.app = self
+        workspace.load(libraryRoot: lib.root)
         Task { await attachRunning() }
     }
 
@@ -49,6 +53,7 @@ final class AppModel {
         profiles = library.profiles()
         if let s = selection, !devices.contains(where: { $0.id == s }) { selection = nil }
         if selection == nil { selection = devices.first?.id }
+        workspace.prune()
     }
 
     /// Switches to another library folder.
@@ -62,6 +67,7 @@ final class AppModel {
             library = try MirageLibrary(root: url)
             archive.library = library
             sessions = [:]
+            workspace.load(libraryRoot: url)
             reload()
             Task { await attachRunning() }
         } catch {
@@ -120,6 +126,7 @@ final class AppModel {
 
     func boot(_ id: UUID) {
         guard deviceJobs[id] == nil else { return }
+        if workspace.autoAdd { workspace.add(id) }
         let s = session(id)
         Task {
             do {

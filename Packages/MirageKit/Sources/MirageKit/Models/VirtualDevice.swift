@@ -162,6 +162,22 @@ public struct BindInfo: Codable, Hashable, Sendable {
     }
 }
 
+/// The emulated battery (QEMU machine properties battery-level and
+/// battery-charging): what the fuel gauge or the firmware's soft gauge
+/// reads, and whether a charger is plugged in.
+public struct BatteryState: Codable, Hashable, Sendable {
+    public var level: Int
+    public var charging: Bool
+
+    public init(level: Int = BatteryState.defaultLevel, charging: Bool = false) {
+        self.level = level
+        self.charging = charging
+    }
+
+    /// QEMU's battery-level when none is given.
+    public static let defaultLevel = 80
+}
+
 public struct RuntimeOptions: Codable, Hashable, Sendable {
     /// Start the firmware's built-in NuttX shell on the console UART.
     public var shell: Bool
@@ -174,6 +190,8 @@ public struct RuntimeOptions: Codable, Hashable, Sendable {
     /// QEMU -d log items (e.g. "guest_errors,unimp").
     public var debugLog: String
     public var traceEvents: [String]
+    /// Battery the device boots with (and was last set to); nil = QEMU's default.
+    public var battery: BatteryState?
 
     public init(shell: Bool = true, bluetoothBridge: Bool = true, bluetoothPort: Int = 0,
                 extraArguments: [String] = [], debugLog: String = "", traceEvents: [String] = []) {

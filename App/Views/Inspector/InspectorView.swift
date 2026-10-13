@@ -139,6 +139,7 @@ private struct InfoTab: View {
                     InfoRow(label: "Bluetooth Bridge", value: "127.0.0.1:\(port)", mono: true, copyable: true)
                 }
                 InfoRow(label: "Shell", value: shellText(session.shell))
+                InfoRow(label: "Battery", value: batteryText(session))
                 InfoRow(label: "Last Booted", value: device.lastBootedAt.map(Format.relative) ?? "Never")
                 InfoRow(label: "Created", value: Format.date(device.createdAt))
             }
@@ -165,6 +166,11 @@ private struct InfoTab: View {
         } message: {
             Text("Its storage images, logs and companion pairing data are moved out of the library and deleted.")
         }
+    }
+
+    private func batteryText(_ session: DeviceSession) -> String {
+        let b = session.battery ?? device.options.battery ?? BatteryState()
+        return "\(b.level)%\(b.charging ? ", charging" : "")"
     }
 
     private func shellText(_ s: DeviceSession.ShellStatus) -> String {

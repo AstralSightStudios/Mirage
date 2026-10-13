@@ -8,17 +8,22 @@
 
 /* Begin PBXBuildFile section */
 		010D873DA8FEDA64BC1106E1 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = A51CDFA7C73CBC2D36BE9E9C /* SwiftTerm */; };
+		04C0FDE51487B1E86DFAD4BA /* WorkspaceControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566175B51EC5527D2CBD883D /* WorkspaceControls.swift */; };
 		27C8A7B47E0E1911DD5D98DB /* DeviceChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7397802AF6A76F4E5B19ED1 /* DeviceChrome.swift */; };
+		404DD31C632A0CC68BF0F5A4 /* BatteryControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5846F1634AA2D10EDDC1ED31 /* BatteryControl.swift */; };
 		45271FA449F5E06782A8FEFB /* ScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE153033D9513574027A01D /* ScreenView.swift */; };
 		4B51E2C9DAA080EF89B09D51 /* MirageKit in Frameworks */ = {isa = PBXBuildFile; productRef = BE87711245061830718926B6 /* MirageKit */; };
 		51FCE73DE97612383EFDB14E /* DeviceStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA3A53FEBEFC4D1DDB823A4 /* DeviceStage.swift */; };
 		5A838150EFA325D71F2EA39B /* FilesWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC55B15ACA82A998C028795 /* FilesWindow.swift */; };
 		74B5F40B404A1E2275672F58 /* AstroBoxService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */; };
 		78DB0EEE4783B23FF4E4F99F /* ArchiveWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26BBF700F6E96963D07F6C06 /* ArchiveWindow.swift */; };
+		8B621B89B6BBBF20971514C6 /* ChromeGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7BC361DCB0A1E02AF74A7F3 /* ChromeGeometry.swift */; };
 		8C848AFABCD2284F2E4F38F9 /* ConsolePane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C541A21E4B108F84089DB41 /* ConsolePane.swift */; };
 		8E68E01406EA697785B4E5D2 /* MirageApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B64956B64905E47BE3259C3 /* MirageApp.swift */; };
 		993F04F904608ACC2F3A8DAA /* FileBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B566AC05C53954B376E57780 /* FileBrowser.swift */; };
+		BDDDB5BE1AA0161EBE214FC6 /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BB0D14EDC6FD1DF5861A4E /* WorkspaceModel.swift */; };
 		BF2DDB1EF9CD1CC38585CD18 /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E2C6E737F42510412EB521 /* InspectorView.swift */; };
+		BFB2E2B2B4786DCCB60A3990 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1B7832885E020E0C8A69E6 /* WorkspaceView.swift */; };
 		C5FB29C61747D13A757904F1 /* ProfilesWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63A8FD0502C7F9519BEA5CAF /* ProfilesWindow.swift */; };
 		C67AB9CF6ABF3024575CBA26 /* NewDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C47C720649EC76C7ECB2A0 /* NewDeviceSheet.swift */; };
 		C7E2C3F0CAD8F0CC1B462D00 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D4E2ED21A166D0D0983A10D /* SettingsView.swift */; };
@@ -39,8 +44,12 @@
 		26BBF700F6E96963D07F6C06 /* ArchiveWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveWindow.swift; sourceTree = "<group>"; };
 		26FF3071055E1CD166F6FFDB /* MirageKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MirageKit; path = Packages/MirageKit; sourceTree = SOURCE_ROOT; };
 		3EE153033D9513574027A01D /* ScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenView.swift; sourceTree = "<group>"; };
+		43BB0D14EDC6FD1DF5861A4E /* WorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceModel.swift; sourceTree = "<group>"; };
 		46C47C720649EC76C7ECB2A0 /* NewDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDeviceSheet.swift; sourceTree = "<group>"; };
+		4A1B7832885E020E0C8A69E6 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
 		4E8D58DAADF6C500FD0ED481 /* HubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubView.swift; sourceTree = "<group>"; };
+		566175B51EC5527D2CBD883D /* WorkspaceControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceControls.swift; sourceTree = "<group>"; };
+		5846F1634AA2D10EDDC1ED31 /* BatteryControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryControl.swift; sourceTree = "<group>"; };
 		5D4E2ED21A166D0D0983A10D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AstroBoxService.swift; sourceTree = "<group>"; };
 		63A8FD0502C7F9519BEA5CAF /* ProfilesWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesWindow.swift; sourceTree = "<group>"; };
@@ -55,6 +64,7 @@
 		DFBE0B053EDA634D3EF481A2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EEC55B15ACA82A998C028795 /* FilesWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesWindow.swift; sourceTree = "<group>"; };
 		F3937192ED9C13F0E8A2250F /* Mirage-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Mirage-Bridging-Header.h"; sourceTree = "<group>"; };
+		F7BC361DCB0A1E02AF74A7F3 /* ChromeGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromeGeometry.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,7 +86,9 @@
 				96D1CF627AADBF304BCDB9F3 /* AppModel.swift */,
 				AE324B50FDD58CE97A9E1C29 /* ArchiveModel.swift */,
 				5FE06922FFDFE5E8F2E211C4 /* AstroBoxService.swift */,
+				F7BC361DCB0A1E02AF74A7F3 /* ChromeGeometry.swift */,
 				B566AC05C53954B376E57780 /* FileBrowser.swift */,
+				43BB0D14EDC6FD1DF5861A4E /* WorkspaceModel.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -92,6 +104,7 @@
 		09C1A07276FB96E5610D5309 /* Device */ = {
 			isa = PBXGroup;
 			children = (
+				5846F1634AA2D10EDDC1ED31 /* BatteryControl.swift */,
 				A7397802AF6A76F4E5B19ED1 /* DeviceChrome.swift */,
 				0BA3A53FEBEFC4D1DDB823A4 /* DeviceStage.swift */,
 				3EE153033D9513574027A01D /* ScreenView.swift */,
@@ -126,6 +139,15 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		59088DCF401F441D3982990E /* Workspace */ = {
+			isa = PBXGroup;
+			children = (
+				566175B51EC5527D2CBD883D /* WorkspaceControls.swift */,
+				4A1B7832885E020E0C8A69E6 /* WorkspaceView.swift */,
+			);
+			path = Workspace;
+			sourceTree = "<group>";
+		};
 		C3B3D15D34A00777AE66C927 /* Inspector */ = {
 			isa = PBXGroup;
 			children = (
@@ -154,6 +176,7 @@
 				D7C68DD59DC5D0388398145A /* Files */,
 				C3B3D15D34A00777AE66C927 /* Inspector */,
 				0F3D5BF3D9167E80393A79EB /* Profiles */,
+				59088DCF401F441D3982990E /* Workspace */,
 				4E8D58DAADF6C500FD0ED481 /* HubView.swift */,
 				46C47C720649EC76C7ECB2A0 /* NewDeviceSheet.swift */,
 				5D4E2ED21A166D0D0983A10D /* SettingsView.swift */,
@@ -321,7 +344,9 @@
 				CFE9052AEEBCD222239DD960 /* ArchiveModel.swift in Sources */,
 				78DB0EEE4783B23FF4E4F99F /* ArchiveWindow.swift in Sources */,
 				74B5F40B404A1E2275672F58 /* AstroBoxService.swift in Sources */,
+				404DD31C632A0CC68BF0F5A4 /* BatteryControl.swift in Sources */,
 				C984976E96DE16DC11689DF2 /* BindingTab.swift in Sources */,
+				8B621B89B6BBBF20971514C6 /* ChromeGeometry.swift in Sources */,
 				8C848AFABCD2284F2E4F38F9 /* ConsolePane.swift in Sources */,
 				27C8A7B47E0E1911DD5D98DB /* DeviceChrome.swift in Sources */,
 				51FCE73DE97612383EFDB14E /* DeviceStage.swift in Sources */,
@@ -334,6 +359,9 @@
 				C5FB29C61747D13A757904F1 /* ProfilesWindow.swift in Sources */,
 				45271FA449F5E06782A8FEFB /* ScreenView.swift in Sources */,
 				C7E2C3F0CAD8F0CC1B462D00 /* SettingsView.swift in Sources */,
+				04C0FDE51487B1E86DFAD4BA /* WorkspaceControls.swift in Sources */,
+				BDDDB5BE1AA0161EBE214FC6 /* WorkspaceModel.swift in Sources */,
+				BFB2E2B2B4786DCCB60A3990 /* WorkspaceView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -33,6 +33,8 @@ Devices
   tap DEVICE X Y                     touch the panel (pixels)
   swipe DEVICE X0 Y0 X1 Y1 [MS]
   button DEVICE QCODE [--hold SEC]   press a hardware key (home, pgdn, ...)
+  battery DEVICE [LEVEL] [--charging|--discharging]
+                                     show or set the battery (percent, charger plugged)
   sh DEVICE COMMAND...               run an NSH command, print its output
   console DEVICE                     interactive console (Ctrl-] quits)
 
@@ -339,6 +341,24 @@ func run() async throws {
         let s = await session(for: d, library)
         guard s.state.isActive else { fail("\(d.name) is not running") }
         await s.press(args.positional[1], duration: Double(args.value("hold") ?? "0.12") ?? 0.12)
+
+    case "battery":
+        let d = device()
+        let s = await session(for: d, library)
+        var state = d.options.battery ?? BatteryState()
+        if s.state.isActive, let live = await s.refreshBattery() { state = live }
+        let change = args.positional.count > 1 || args.flags.contains("charging") || args.flags.contains("discharging")
+        if change {
+            if args.positional.count > 1 {
+                guard let level = Int(args.positional[1].trimmingCharacters(in: CharacterSet(charactersIn: "%"))),
+                      (0...100).contains(level) else { fail("LEVEL is a percentage, 0..100") }
+                state.level = level
+            }
+            if args.flags.contains("charging") { state.charging = true }
+            if args.flags.contains("discharging") { state.charging = false }
+            try await s.setBattery(state)
+        }
+        print("\(state.level)% \(state.charging ? "charging" : "on battery")\(s.state.isActive ? "" : " (applies at next boot)")")
 
     case "sh":
         let d = device()

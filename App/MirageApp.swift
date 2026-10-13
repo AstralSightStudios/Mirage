@@ -132,13 +132,30 @@ struct MirageCommands: Commands {
             Button("Show Files") { if let id { openWindow(id: "files", value: id) } }
                 .keyboardShortcut("f", modifiers: [.command, .shift])
                 .disabled(id == nil)
-            Button("Zoom to Fit") { hub?.zoom.wrappedValue = .fit }
+            Button("Zoom to Fit") {
+                if hub?.workspace.wrappedValue == true { model.workspace.fitAll() } else { hub?.zoom.wrappedValue = .fit }
+            }
                 .keyboardShortcut("0")
             Button("Pixel Accurate") { hub?.zoom.wrappedValue = .scale(1 / (NSScreen.main?.backingScaleFactor ?? 2)) }
                 .keyboardShortcut("1")
             Divider()
             Button("Erase All Content and Settings…") { if let id { model.eraseDevice(id) } }
                 .disabled(id == nil || active)
+        }
+        CommandMenu("Workspace") {
+            Button(hub?.workspace.wrappedValue == true ? "Show Selected Device" : "Show Workspace") {
+                hub?.workspace.wrappedValue.toggle()
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+            .disabled(hub == nil)
+            Divider()
+            ForEach(Array(WorkspaceLayout.allCases.enumerated()), id: \.element) { i, l in
+                Toggle(l.title, isOn: Binding(get: { model.workspace.layout == l },
+                                              set: { if $0 { model.workspace.layout = l } }))
+                    .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: [.control, .command])
+            }
+            Divider()
+            WorkspaceArrangeItems(model: model, shortcuts: true)
         }
         CommandGroup(after: .windowArrangement) {
             Button("Firmware Archives") { openWindow(id: "archives") }

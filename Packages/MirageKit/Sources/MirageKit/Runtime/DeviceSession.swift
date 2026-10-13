@@ -56,6 +56,8 @@ public final class DeviceSession {
     public private(set) var commandLine: String?
     public private(set) var exitStatus: Int32?
     public private(set) var consoleConnected = false
+    /// The emulated battery while running (read from QEMU on attach).
+    public private(set) var battery: BatteryState?
 
     @ObservationIgnored private var qmp: QMPClient?
     @ObservationIgnored private var vnc: VNCClient?
@@ -268,6 +270,7 @@ public final class DeviceSession {
         pid = nil
         endpoints = nil
         consoleConnected = false
+        battery = nil
         if let device {
             let paths = library.paths(for: device)
             try? FileManager.default.removeItem(at: paths.runtimeFile)
@@ -364,6 +367,7 @@ public final class DeviceSession {
 
     private func adoptQMP(_ q: QMPClient) {
         qmp = q
+        Task { await refreshBattery() }
         q.onEvent { [weak self] event, _ in
             Task { @MainActor in
                 guard let self else { return }
@@ -481,6 +485,27 @@ public final class DeviceSession {
         await button(qcode, down: true)
         try? await Task.sleep(nanoseconds: UInt64(duration * 1e9))
         await button(qcode, down: false)
+    }
+
+    /// Reads the battery back from QEMU.
+    @discardableResult
+    public func refreshBattery() async -> BatteryState? {
+        guard let qmp else { return nil }
+        if let b = try? await qmp.battery() { battery = b }
+        return battery
+    }
+
+    /// Sets the emulated battery now and keeps it for the next boot.
+    public func setBattery(_ state: BatteryState) async throws {
+        let state = BatteryState(level: max(0, min(100, state.level)), charging: state.charging)
+        if let qmp, self.state.isActive {
+            try await qmp.setBattery(state)
+            battery = state
+        }
+        if var d = device, d.options.battery != state {
+            d.options.battery = state
+            try library.saveDevice(d)
+        }
     }
 
     public func hmp(_ command: String) async throws -> String {

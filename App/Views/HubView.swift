@@ -9,6 +9,7 @@ struct HubView: View {
     @SceneStorage("inspector") private var showInspector = true
     @SceneStorage("console") private var showConsole = false
     @SceneStorage("inspectorTab") private var inspectorTab: InspectorTab = .info
+    @SceneStorage("workspaceMode") private var workspaceMode = false
     @State private var zoom: ZoomMode = .natural
     @State private var scaleBox = ScaleBox()
     @AppStorage("consoleHeight") private var consoleHeight: Double = 280
@@ -58,12 +59,32 @@ struct HubView: View {
         .alert(item: $model.alert) { a in
             Alert(title: Text(a.title), message: a.message.isEmpty ? nil : Text(a.message))
         }
-        .focusedSceneValue(\.hubActions, HubActions(showConsole: $showConsole, zoom: $zoom))
+        .focusedSceneValue(\.hubActions, HubActions(showConsole: $showConsole, zoom: $zoom, workspace: $workspaceMode))
     }
 
     @ViewBuilder
     private var detail: some View {
-        if let d = model.device(model.selection) {
+        if workspaceMode {
+            VStack(spacing: 0) {
+                WorkspaceView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if showConsole, let d = model.device(model.selection) {
+                    DrawerHandle(height: $consoleHeight)
+                    ConsolePane(device: d)
+                        .frame(height: consoleHeight)
+                }
+            }
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+            .navigationTitle("Workspace")
+            .navigationSubtitle(workspaceSubtitle)
+            .toolbar {
+                ToolbarItem(placement: .navigation) { ViewModePicker(workspace: $workspaceMode) }
+                WorkspaceToolbar(model: model)
+                if let d = model.device(model.selection) {
+                    DeviceToolbar(device: d, showConsole: $showConsole)
+                }
+            }
+        } else if let d = model.device(model.selection) {
             VStack(spacing: 0) {
                 DeviceStage(device: d, zoom: $zoom, scaleBox: scaleBox)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -79,6 +100,7 @@ struct HubView: View {
             .navigationTitle(d.name)
             .navigationSubtitle(model.firmware(d.firmwareID).map { "HyperOS \($0.version)" } ?? "")
             .toolbar {
+                ToolbarItem(placement: .navigation) { ViewModePicker(workspace: $workspaceMode) }
                 DeviceToolbar(device: d, showConsole: $showConsole)
             }
             .background(Color(nsColor: .underPageBackgroundColor).opacity(0.35))
@@ -92,6 +114,15 @@ struct HubView: View {
                 Button("Browse Firmware Archives…") { openWindow(id: "archives") }
             }
         }
+    }
+}
+
+private extension HubView {
+    var workspaceSubtitle: String {
+        let ws = model.workspace
+        let running = ws.tiles.filter { model.state(of: $0.id).isActive }.count
+        let n = ws.tiles.count
+        return n == 0 ? "" : "\(n) device\(n == 1 ? "" : "s") · \(running) running"
     }
 }
 
@@ -121,6 +152,7 @@ private struct DrawerHandle: View {
 struct HubActions {
     var showConsole: Binding<Bool>
     var zoom: Binding<ZoomMode>
+    var workspace: Binding<Bool>
 }
 
 extension FocusedValues {
@@ -149,6 +181,7 @@ private struct DeviceToolbar: ToolbarContent {
                     .disabled(session.state != .running)
                 }
             }
+            BatteryToolbarButton(device: device)
             Button { screenshot(session) } label: { Label("Screenshot", systemImage: "camera") }
                 .help("Save Screenshot")
                 .disabled(!active)
@@ -244,6 +277,9 @@ struct DeviceSidebar: View {
             if let id = ids.first, let d = model.device(id) {
                 let active = model.state(of: id).isActive
                 Button(active ? "Shut Down" : "Boot") { active ? model.shutdown(id) : model.boot(id) }
+                Button(model.workspace.contains(id) ? "Remove from Workspace" : "Show in Workspace") {
+                    model.workspace.toggle(id)
+                }
                 Button("Duplicate") { model.duplicateDevice(id) }.disabled(active)
                 Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([model.library.deviceDirectory(d.id)]) }
                 Divider()

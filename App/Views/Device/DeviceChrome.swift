@@ -1,37 +1,6 @@
 import MirageKit
 import SwiftUI
 
-/// Proportions of a device's card around its panel, in panel pixels.
-struct ChromeGeometry {
-    let profile: DeviceProfile
-
-    var screen: CGSize { CGSize(width: profile.screen.width, height: profile.screen.height) }
-
-    /// Slim, delicate panel pixel padding for the liquid glass card around the screen.
-    var cardPadding: CGFloat {
-        max(8, min(screen.width, screen.height) * 0.025)
-    }
-
-    /// Card size in panel pixels.
-    var card: CGSize {
-        CGSize(width: screen.width + cardPadding * 2, height: screen.height + cardPadding * 2)
-    }
-
-    /// Extra width allocated for the independent button column (in panel pixels).
-    var buttonColumnWidth: CGFloat {
-        profile.buttons.isEmpty ? 0 : 105
-    }
-
-    /// Total bounding size in panel pixels for stage fit calculation.
-    var total: CGSize {
-        CGSize(width: card.width + buttonColumnWidth * 2, height: card.height)
-    }
-
-    var screenCorner: CGFloat {
-        profile.screen.shape == .circle ? min(screen.width, screen.height) / 2 : profile.screen.cornerRadius
-    }
-}
-
 /// Reserves equal space on both sides of the panel, with the dock only on the right.
 /// The screen and its caption share the stage's center, regardless of dock width.
 private struct ScreenCenteredLayout: Layout {
@@ -65,6 +34,8 @@ struct DeviceChrome<Screen: View>: View {
     /// Points per panel pixel.
     let scale: CGFloat
     var onButton: ((DeviceProfile.HardwareButton, Bool) -> Void)?
+    /// The column of hardware buttons beside the case.
+    var showsButtons = true
     @ViewBuilder var screen: () -> Screen
 
     private var geo: ChromeGeometry { ChromeGeometry(profile: profile) }
@@ -80,7 +51,7 @@ struct DeviceChrome<Screen: View>: View {
             glassScreenCard(screenSize: screenSize, padding: padding)
 
             // Independent vertical column of buttons
-            if !profile.buttons.isEmpty {
+            if showsButtons && !profile.buttons.isEmpty {
                 HardwareButtonColumn(buttons: profile.buttons, accent: accent, scale: scale) { button, down in
                     onButton?(button, down)
                 }
