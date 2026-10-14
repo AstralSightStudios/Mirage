@@ -66,9 +66,10 @@ int main(int argc, char **argv) {
     mab_init(on_message, NULL); /* idempotent */
 
     char params[4096];
+    const char *band = getenv("MAB_BAND"); /* optional band address */
     snprintf(params, sizeof params,
-             "{\"host\":\"127.0.0.1\",\"port\":%s,\"authKey\":\"%s\",\"stateDir\":\"%s\",\"timeoutSecs\":180}",
-             argv[1], argv[2], argv[3]);
+             "{\"host\":\"127.0.0.1\",\"port\":%s,\"authKey\":\"%s\",\"stateDir\":\"%s\",\"timeoutSecs\":180%s%s%s}",
+             argv[1], argv[2], argv[3], band ? ",\"bandAddr\":\"" : "", band ? band : "", band ? "\"" : "");
     call("status", NULL);
     if (!call("connect", params)) {
         call("status", NULL);

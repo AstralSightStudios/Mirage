@@ -121,6 +121,11 @@ pub struct ConnectParams {
     /// saved in `stateDir/credentials.json`, if any.
     #[serde(default)]
     app_device_id: Option<String>,
+    /// The band's Bluetooth address. A bound band does not answer inquiries
+    /// and only shows up after its LE reconnect beacon, so adding it by
+    /// address makes connecting immediate and deterministic.
+    #[serde(default)]
+    band_addr: Option<String>,
 }
 
 fn default_host() -> String {
@@ -191,6 +196,10 @@ async fn connect_inner(
         }
     }
 
+    if let Some(addr) = p.band_addr.as_deref() {
+        bridge().add_device(addr).map_err(|e| format!("cannot add band {addr}: {e:?}"))?;
+    }
+
     // 2. find the band and page it: pair (the band may ask the user to
     // confirm), encrypt, open SPP. Bonded addresses from link-keys are known
     // up front without names; devices that answered this session's inquiry
@@ -230,7 +239,12 @@ async fn connect_inner(
             log::info!(target: "mirage", "no band found yet; inquiring again");
         }
         if let Err(err) = blocking(|| bridge().rescan()).await? {
-            return Err(format!("inquiry failed: {err}"));
+            // "refused" means the previous inquiry is still running (HCI
+            // command disallowed): keep waiting for its results.
+            if !format!("{err}").contains("refused") {
+                return Err(format!("inquiry failed: {err}"));
+            }
+            log::info!(target: "mirage", "inquiry still running; waiting");
         }
         tokio::time::sleep(Duration::from_secs(4)).await;
     };

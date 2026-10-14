@@ -300,6 +300,27 @@ pub async fn quick_apps() -> Result<Value, String> {
     serde_json::to_value(list).map_err(|e| e.to_string())
 }
 
+/// Canopus modules the band carries as quick apps (`com.canopus.pkg.<id>`),
+/// with their versionCode; the band imports them when its Canopus Supervisor
+/// scans.
+pub async fn canopus_modules() -> Result<Value, String> {
+    let addr = connected_addr()?;
+    let apps = fetch_quick_apps(&addr).await?;
+    let modules: Vec<Value> = corelib::device::canopus::modules_from_apps(&apps)
+        .into_iter()
+        .map(|m| {
+            json!({
+                "id": m.id,
+                "packageName": m.package_name,
+                "name": m.name,
+                "versionCode": m.version_code,
+                "fingerprint": m.fingerprint.iter().map(|b| format!("{b:02x}")).collect::<String>(),
+            })
+        })
+        .collect();
+    Ok(Value::Array(modules))
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickAppParams {

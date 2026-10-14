@@ -35,6 +35,7 @@
  *   setWatchface {id} → null
  *   removeWatchface {id} → null
  *   quickApps    {} → [{packageName, name, version, canRemove, fingerprint}]
+ *   canopusModules {} → [{id, packageName, name, versionCode, fingerprint}] (quick apps named com.canopus.pkg.<id>)
  *   launchQuickApp {packageName, page?=""} → null
  *   removeQuickApp {packageName} → null
  *   sendNotification {title, text?="", subTitle?="", appName?="Mirage", source?="mirage", id?=0}
