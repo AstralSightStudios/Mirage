@@ -68,10 +68,15 @@ public struct FactoryIdentity: Codable, Hashable, Sendable {
         // locally administered unicast address
         var mac = (0..<6).map { _ in UInt8.random(in: 0...255, using: &rng) }
         mac[0] = (mac[0] & 0xFC) | 0x02
+        var extra: [Property] = []
+        if let sku = profile.defaults.sku {
+            extra.append(.init(key: "ro.factory.sku", value: sku))
+        }
         return FactoryIdentity(
             did: did,
             serial: profile.defaults.psnPrefix + tail,
-            bluetoothAddress: mac.map { String(format: "%02X", $0) }.joined(separator: ":"))
+            bluetoothAddress: mac.map { String(format: "%02X", $0) }.joined(separator: ":"),
+            extra: extra)
     }
 
     public func validate() throws {

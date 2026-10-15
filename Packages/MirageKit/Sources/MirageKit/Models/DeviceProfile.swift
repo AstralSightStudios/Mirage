@@ -78,10 +78,13 @@ public struct DeviceProfile: Codable, Identifiable, Hashable, Sendable {
         public var didPrefix: String
         /// Leading characters of generated serials (ro.factory.psn).
         public var psnPrefix: String
+        /// Optional default SKU (ro.factory.sku).
+        public var sku: String?
 
-        public init(didPrefix: String, psnPrefix: String) {
+        public init(didPrefix: String, psnPrefix: String, sku: String? = nil) {
             self.didPrefix = didPrefix
             self.psnPrefix = psnPrefix
+            self.sku = sku
         }
     }
 
@@ -421,10 +424,36 @@ public extension DeviceProfile {
             factory: .init(flash: .mainNOR, offset: 0xCC0000, blockSize: 256,
                            blockCount: 1, ioSize: 256, diskVersion: 0, format: .p65Record)),
         consoleUART: 1,
-        defaults: .init(didPrefix: "1502", psnPrefix: "QEMU1502"),
+        defaults: .init(didPrefix: "1502", psnPrefix: "QEMU1502", sku: "M2509W1"),
         accent: "#FF5722",
         notes: "Panel 432x514 (rm690c0 driver), Zinitix touch on I2C5, SPI NAND (resource romfs + /data).",
         builtin: true)
 
-    static let builtins: [DeviceProfile] = [.p67, .q63, .q66, .n66, .o66, .n67, .p65]
+    /// REDMI Watch 7: board "q65" (best1502p), 432x514 panel.
+    static let q65 = DeviceProfile(
+        id: "q65",
+        name: "REDMI Watch 7",
+        family: .watch,
+        chip: "best1502p",
+        qemuBoard: "q65",
+        productPrefixes: ["miwear.watch.q65"],
+        screen: .init(width: 432, height: 514, shape: .roundedRect, cornerRadius: 48),
+        buttons: [
+            .init(id: "home", title: "Upper Button", qcode: "home", placement: .rightUpper, symbol: "button.horizontal.top.press"),
+            .init(id: "down", title: "Power Key", qcode: "pgdn", placement: .rightLower, symbol: "button.horizontal.top.press"),
+        ],
+        storage: .init(
+            mainNOR: true,
+            nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
+                        resourceImage: "vela_resource.bin", resourceFirstPage: 0,
+                        resourcePages: 120320, dataPages: 141824),
+            factory: .init(flash: .mainNOR, offset: 0xCC0000, blockSize: 256,
+                           blockCount: 1, ioSize: 256, diskVersion: 0, format: .p65Record)),
+        consoleUART: 1,
+        defaults: .init(didPrefix: "1502", psnPrefix: "QEMU1502", sku: "M2611W1"),
+        accent: "#E91E63",
+        notes: "Panel 432x514 (rm690c0 driver), CST9317 touch on I2C5, SPI NAND (resource romfs + /data).",
+        builtin: true)
+
+    static let builtins: [DeviceProfile] = [.p67, .q63, .q66, .n66, .o66, .n67, .p65, .q65]
 }

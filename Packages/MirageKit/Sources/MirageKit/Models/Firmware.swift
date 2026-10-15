@@ -61,6 +61,7 @@ public enum ProductCatalog {
         "miwear.watch.p67gln": "Xiaomi Smart Band 10 Pro NFC",
         "miwear.watch.p67tc": "Xiaomi Smart Band 10 Pro Ceramic",
         "miwear.watch.q63": "Xiaomi Watch S5",
+        "miwear.watch.q65": "REDMI Watch 7",
         "miwear.watch.q65acn": "REDMI Watch 6 Active",
         "miwear.watch.q66cn": "Xiaomi Smart Band 11",
         "miwear.watch.q66nfc": "Xiaomi Smart Band 11 NFC",
