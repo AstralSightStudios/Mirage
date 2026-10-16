@@ -211,10 +211,12 @@ public struct NANDSpec: Codable, Hashable, Sendable {
     /// firmware's partition table), right after system / resource. nil
     /// runs to the end of the part.
     public var dataPages: Int?
+    /// Explicit first page of the data partition. When nil, follows system or resource.
+    public var dataStartPage: Int?
 
     public init(pageSize: Int, oobSize: Int, pagesPerBlock: Int, blocks: Int,
                 resourceImage: String, resourceFirstPage: Int, resourcePages: Int,
-                systemPages: Int? = nil, dataPages: Int? = nil) {
+                systemPages: Int? = nil, dataPages: Int? = nil, dataStartPage: Int? = nil) {
         self.pageSize = pageSize
         self.oobSize = oobSize
         self.pagesPerBlock = pagesPerBlock
@@ -224,9 +226,10 @@ public struct NANDSpec: Codable, Hashable, Sendable {
         self.resourcePages = resourcePages
         self.systemPages = systemPages
         self.dataPages = dataPages
+        self.dataStartPage = dataStartPage
     }
 
-    public var dataFirstPage: Int { systemPages ?? (resourceFirstPage + resourcePages) }
+    public var dataFirstPage: Int { dataStartPage ?? systemPages ?? (resourceFirstPage + resourcePages) }
     public var dataPageCount: Int { dataPages ?? (blocks * pagesPerBlock - dataFirstPage) }
 
     public var imageSize: Int { (pageSize + oobSize) * pagesPerBlock * blocks }
@@ -446,7 +449,7 @@ public extension DeviceProfile {
             mainNOR: true,
             nand: .init(pageSize: 2048, oobSize: 64, pagesPerBlock: 64, blocks: 4096,
                         resourceImage: "vela_resource.bin", resourceFirstPage: 0,
-                        resourcePages: 120320, dataPages: 141824),
+                        resourcePages: 120320, dataPages: 118784, dataStartPage: 122880),
             factory: .init(flash: .mainNOR, offset: 0xCC0000, blockSize: 256,
                            blockCount: 1, ioSize: 256, diskVersion: 0, format: .p65Record)),
         consoleUART: 1,

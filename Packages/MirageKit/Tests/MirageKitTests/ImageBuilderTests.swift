@@ -99,6 +99,17 @@ import Testing
     #expect(readBack == props)
 }
 
+@Test func q65NANDGeometry() {
+    guard let nand = DeviceProfile.q65.storage.nand else {
+        #expect(Bool(false), "q65 profile missing nand spec")
+        return
+    }
+    #expect(nand.resourceFirstPage == 0)
+    #expect(nand.resourcePages == 120320)
+    #expect(nand.dataFirstPage == 122880)
+    #expect(nand.dataPageCount == 118784)
+}
+
 @Test func p65NSHInjectorPlan() throws {
     let fwURL = URL(fileURLWithPath: "/Volumes/EXT0/GitHub/qemu-miwear/miwear.watch.p65_v3.100.043_full_662aa7db/vela_ap.bin")
     guard FileManager.default.fileExists(atPath: fwURL.path) else { return }
