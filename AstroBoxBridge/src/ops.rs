@@ -49,6 +49,7 @@ async fn await_reply<T>(rx: oneshot::Receiver<anyhow::Result<T>>, what: &str) ->
 pub enum InstallKind {
     Watchface,
     Quickapp,
+    Canopus,
 }
 
 #[derive(Deserialize)]
@@ -120,7 +121,13 @@ pub async fn install(id: u64, p: InstallParams) -> Result<Value, String> {
         return Err(format!("{} is empty", p.path.display()));
     }
 
+    if p.kind == InstallKind::Canopus {
+        let outcome = corelib::device::canopus::install_native_package(&addr, &file,
+            Arc::new(move |progress| host::emit_progress(id, progress, "Sending Canopus module"))).await?;
+        return serde_json::to_value(outcome).map_err(|e| e.to_string());
+    }
     let (data_type, payload, package_name, mut result) = match p.kind {
+        InstallKind::Canopus => unreachable!(),
         InstallKind::Quickapp => {
             let manifest = read_rpk_manifest(&file);
             let package = match p.package_name.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
@@ -171,7 +178,7 @@ pub async fn install(id: u64, p: InstallParams) -> Result<Value, String> {
     };
     let watchface_override = match p.kind {
         InstallKind::Watchface => p.watchface_id.clone().filter(|s| !s.trim().is_empty()),
-        InstallKind::Quickapp => None,
+        InstallKind::Quickapp | InstallKind::Canopus => None,
     };
     let size = payload.len();
     result["bytes"] = json!(size);
@@ -300,25 +307,11 @@ pub async fn quick_apps() -> Result<Value, String> {
     serde_json::to_value(list).map_err(|e| e.to_string())
 }
 
-/// Canopus modules the band carries as quick apps (`com.canopus.pkg.<id>`),
-/// with their versionCode; the band imports them when its Canopus Supervisor
-/// scans.
+/// Live Supervisor inventory over CPC2, independent of quick apps.
 pub async fn canopus_modules() -> Result<Value, String> {
     let addr = connected_addr()?;
-    let apps = fetch_quick_apps(&addr).await?;
-    let modules: Vec<Value> = corelib::device::canopus::modules_from_apps(&apps)
-        .into_iter()
-        .map(|m| {
-            json!({
-                "id": m.id,
-                "packageName": m.package_name,
-                "name": m.name,
-                "versionCode": m.version_code,
-                "fingerprint": m.fingerprint.iter().map(|b| format!("{b:02x}")).collect::<String>(),
-            })
-        })
-        .collect();
-    Ok(Value::Array(modules))
+    let modules = corelib::device::canopus::list_device_modules(&addr).await?;
+    serde_json::to_value(modules).map_err(|e| e.to_string())
 }
 
 #[derive(Deserialize)]
