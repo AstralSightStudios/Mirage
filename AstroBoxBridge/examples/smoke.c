@@ -2,6 +2,7 @@
  * Smoke test for libmirage_astrobox.a through its C API.
  *
  *   smoke <port> <authKey> <stateDir> [method[=paramsJSON] ...]
+ *   smoke <port> <authKey> <stateDir> --stdin     (requests from stdin, one per line)
  *
  * Runs init → connect → (the given methods, default: deviceInfo watchfaces
  * quickApps) → disconnect, printing every callback message. A `sleep=N`
@@ -74,6 +75,25 @@ int main(int argc, char **argv) {
     if (!call("connect", params)) {
         call("status", NULL);
         return 1;
+    }
+
+    if (argc > 4 && strcmp(argv[4], "--stdin") == 0) {
+        /* Interactive: one `method[=paramsJSON]` per line on stdin, `quit` to leave. The
+         * callback keeps printing device messages (e.g. {"type":"connect",...}) meanwhile. */
+        char *line = NULL;
+        size_t cap = 0;
+        ssize_t n;
+        while ((n = getline(&line, &cap, stdin)) != -1) {
+            while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r')) line[--n] = 0;
+            if (n == 0) continue;
+            if (strcmp(line, "quit") == 0) break;
+            char *eq = strchr(line, '=');
+            if (eq) *eq = 0;
+            call(line, eq ? eq + 1 : NULL);
+        }
+        free(line);
+        call("disconnect", NULL);
+        return 0;
     }
 
     const char *defaults[] = {"deviceInfo", "watchfaces", "quickApps"};

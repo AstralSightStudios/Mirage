@@ -94,6 +94,8 @@ async fn handle(id: u64, method: &str, params: Value) -> Result<Value, String> {
         "removeWatchface" => ops::remove_watchface(parse(params)?).await,
         "quickApps" => ops::quick_apps().await,
         "canopusModules" => ops::canopus_modules().await,
+        "connectListen" => ops::connect_listen(parse(params)?).await,
+        "connectSend" => ops::connect_send(parse(params)?).await,
         "launchQuickApp" => ops::launch_quick_app(parse(params)?).await,
         "removeQuickApp" => ops::remove_quick_app(parse(params)?).await,
         "sendNotification" => ops::send_notification(parse(params)?).await,

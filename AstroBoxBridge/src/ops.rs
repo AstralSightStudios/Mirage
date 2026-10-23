@@ -409,3 +409,87 @@ pub async fn send_notification(p: NotificationParams) -> Result<Value, String> {
     corelib::device::notification::send(addr, p.source, content).await.map_err(|e| format!("{e:#}"))?;
     Ok(Value::Null)
 }
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectParams {
+    /// Module id (ADR-CAN-003).
+    module: String,
+    /// connectListen: start (default) or stop the module's pushes.
+    #[serde(default = "yes")]
+    enable: bool,
+    /// connectSend: 1 text, 2 binary (default).
+    #[serde(default = "binary")]
+    kind: u8,
+    /// connectSend: the message as hex (binary) or `text`.
+    #[serde(default)]
+    data_hex: String,
+    #[serde(default)]
+    text: String,
+}
+
+fn yes() -> bool {
+    true
+}
+
+fn binary() -> u8 {
+    corelib::device::canopus::CONNECT_BINARY
+}
+
+fn from_hex(text: &str) -> Result<Vec<u8>, String> {
+    if text.len() % 2 != 0 {
+        return Err("dataHex has an odd length".into());
+    }
+    (0..text.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&text[i..i + 2], 16).map_err(|_| "dataHex is not hex".to_string()))
+        .collect()
+}
+
+/// CanopusConnect: registers (or removes) the phone as the listener of a module and
+/// starts printing the module's messages as `{"type":"connect",...}` events.
+pub async fn connect_listen(p: ConnectParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    if p.enable {
+        subscribe_connect_events(&addr)?;
+    }
+    corelib::device::canopus::connect_listen(&addr, &p.module, p.enable).await?;
+    Ok(Value::Null)
+}
+
+/// CanopusConnect: one message to the module's listener.
+pub async fn connect_send(p: ConnectParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    let data = if p.kind == corelib::device::canopus::CONNECT_TEXT {
+        p.text.into_bytes()
+    } else {
+        from_hex(&p.data_hex)?
+    };
+    corelib::device::canopus::connect_send(&addr, &p.module, p.kind, &data).await?;
+    Ok(Value::Null)
+}
+
+static CONNECT_PUMP: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Forwards the device's CanopusConnect messages to the callback (once per device).
+fn subscribe_connect_events(addr: &str) -> Result<(), String> {
+    let mut subscribed = CONNECT_PUMP.lock().unwrap();
+    if subscribed.as_deref() == Some(addr) {
+        return Ok(());
+    }
+    let mut rx = corelib::device::canopus::connect_subscribe(addr)?;
+    *subscribed = Some(addr.to_string());
+    let Some(rt) = host::runtime() else { return Ok(()) };
+    rt.spawn(async move {
+        while let Some(message) = rx.recv().await {
+            let data_hex: String = message.data.iter().map(|b| format!("{b:02x}")).collect();
+            host::emit(serde_json::json!({
+                "type": "connect",
+                "module": message.module_id,
+                "kind": message.kind,
+                "dataHex": data_hex,
+            }));
+        }
+    });
+    Ok(())
+}
