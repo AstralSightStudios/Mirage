@@ -78,6 +78,8 @@ int main(int argc, char **argv) {
     }
 
     if (argc > 4 && strcmp(argv[4], "--stdin") == 0) {
+        printf("%8.3f {\"type\":\"ready\"}\n", elapsed());
+        fflush(stdout);
         /* Interactive: one `method[=paramsJSON]` per line on stdin, `quit` to leave. The
          * callback keeps printing device messages (e.g. {"type":"connect",...}) meanwhile. */
         char *line = NULL;
