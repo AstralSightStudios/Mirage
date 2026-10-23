@@ -1,4 +1,5 @@
-//! Resource management on the connected band: installs, watchfaces, quick apps.
+//! Resource management on the connected band: installs, watchfaces, quick apps,
+//! Canopus native modules and RPC capabilities.
 
 use std::io::{Cursor, Read};
 use std::path::PathBuf;
@@ -122,10 +123,15 @@ pub async fn install(id: u64, p: InstallParams) -> Result<Value, String> {
     }
 
     if p.kind == InstallKind::Canopus {
-        let outcome = corelib::device::canopus::install_native_package(&addr, &file,
-            Arc::new(move |progress| host::emit_progress(id, progress, "Sending Canopus module"))).await?;
+        let outcome = corelib::device::canopus::install_native_package(
+            &addr,
+            &file,
+            Arc::new(move |progress| host::emit_progress(id, progress, "Sending Canopus module")),
+        )
+        .await?;
         return serde_json::to_value(outcome).map_err(|e| e.to_string());
     }
+
     let (data_type, payload, package_name, mut result) = match p.kind {
         InstallKind::Canopus => unreachable!(),
         InstallKind::Quickapp => {
@@ -162,10 +168,8 @@ pub async fn install(id: u64, p: InstallParams) -> Result<Value, String> {
             let file_id = corelib::device::watchface::resolve_xiaomi_watchface_id(addr.clone(), bin.clone())
                 .await
                 .map_err(|e| format!("{e:#}"))?;
-            if let Some(fid) = file_id.as_deref().map(str::trim) {
-                if fid.starts_with(DAMAGED_WATCHFACE_ID_PREFIX) {
-                    return Err(format!("the watchface is damaged (id {fid})"));
-                }
+            if let Some(fid) = file_id.as_deref().map(str::trim).filter(|s| s.starts_with(DAMAGED_WATCHFACE_ID_PREFIX)) {
+                return Err(format!("the watchface is damaged (id {fid})"));
             }
             let explicit = p.watchface_id.as_deref().map(str::trim).filter(|s| !s.is_empty());
             let face_id = explicit.map(str::to_owned).or(file_id).ok_or(
@@ -241,7 +245,6 @@ pub async fn watchfaces() -> Result<Value, String> {
             id: w.id,
             name: w.name,
             current: w.is_current,
-            // absent means removable, as in the companion core's UI
             can_remove: w.can_remove.unwrap_or(true),
             can_edit: w.can_edit,
             version_code: w.version_code,
@@ -307,24 +310,14 @@ pub async fn quick_apps() -> Result<Value, String> {
     serde_json::to_value(list).map_err(|e| e.to_string())
 }
 
-/// Live Supervisor inventory over CPC2, independent of quick apps.
-pub async fn canopus_modules() -> Result<Value, String> {
-    let addr = connected_addr()?;
-    let modules = corelib::device::canopus::list_device_modules(&addr).await?;
-    serde_json::to_value(modules).map_err(|e| e.to_string())
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickAppParams {
     package_name: String,
-    /// launchQuickApp only: page/URI to open (default: the app's entry page)
     #[serde(default)]
     page: String,
 }
 
-/// corelib addresses quick apps by the fingerprint from the last list, so
-/// refresh it and make sure the app is there.
 async fn ensure_listed(addr: &str, package: &str) -> Result<protocol::AppItem, String> {
     fetch_quick_apps(addr)
         .await?
@@ -349,7 +342,6 @@ pub async fn remove_quick_app(p: QuickAppParams) -> Result<Value, String> {
     corelib::device::thirdparty_app::uninstall(addr.clone(), p.package_name.clone())
         .await
         .map_err(|e| format!("{e:#}"))?;
-    // The uninstall command has no acknowledgement; confirm via the list.
     let end = Instant::now() + Duration::from_secs(10);
     loop {
         tokio::time::sleep(Duration::from_millis(1000)).await;
@@ -363,15 +355,213 @@ pub async fn remove_quick_app(p: QuickAppParams) -> Result<Value, String> {
     }
 }
 
+// ------------------------------------------------------------ canopus native
+
+/// Live Supervisor inventory over CPC2, independent of quick apps.
+pub async fn canopus_modules() -> Result<Value, String> {
+    let addr = connected_addr()?;
+    let modules = corelib::device::canopus::list_device_modules(&addr).await?;
+    serde_json::to_value(modules).map_err(|e| e.to_string())
+}
+
+/// Query Canopus supervisor CQD1 device info (framework revision, target_id, etc.).
+pub async fn canopus_device_info() -> Result<Value, String> {
+    let addr = connected_addr()?;
+    let info = corelib::device::canopus::get_device_info(&addr).await?;
+    serde_json::to_value(info).map_err(|e| e.to_string())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CanopusQueryModuleParams {
+    pub slot: Option<u32>,
+    pub module: Option<String>,
+}
+
+pub async fn canopus_query_module(p: CanopusQueryModuleParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    if let Some(slot) = p.slot {
+        let module = corelib::device::canopus::query_module(&addr, slot).await?;
+        return serde_json::to_value(module).map_err(|e| e.to_string());
+    }
+    if let Some(ref id) = p.module {
+        let modules = corelib::device::canopus::list_device_modules(&addr).await?;
+        let found = modules.into_iter().find(|m| m.module_id == *id);
+        return serde_json::to_value(found).map_err(|e| e.to_string());
+    }
+    Err("pass either `slot` or `module` (module id)".into())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CanopusSetEnabledParams {
+    pub module: String,
+    pub enabled: bool,
+}
+
+pub async fn canopus_set_enabled(p: CanopusSetEnabledParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    corelib::device::canopus::set_module_enabled(&addr, &p.module, p.enabled).await?;
+    Ok(Value::Null)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CanopusModuleIdParams {
+    pub module: String,
+}
+
+pub async fn canopus_remove(p: CanopusModuleIdParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    corelib::device::canopus::remove_module_cpc2(&addr, &p.module).await?;
+    Ok(Value::Null)
+}
+
+pub async fn canopus_scan() -> Result<Value, String> {
+    let addr = connected_addr()?;
+    corelib::device::canopus::trigger_scan(&addr).await?;
+    Ok(Value::Null)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CanopusExitSafeModeParams {
+    pub action: corelib::device::canopus::SafeModeExit,
+}
+
+pub async fn canopus_exit_safe_mode(p: CanopusExitSafeModeParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    corelib::device::canopus::exit_safe_mode(&addr, p.action).await?;
+    Ok(Value::Null)
+}
+
+pub async fn canopus_get_boot_persistence() -> Result<Value, String> {
+    let addr = connected_addr()?;
+    let bp = corelib::device::canopus::query_boot_persistence(&addr).await?;
+    serde_json::to_value(bp).map_err(|e| e.to_string())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CanopusSetBootPersistenceParams {
+    pub pinned: bool,
+}
+
+pub async fn canopus_set_boot_persistence(p: CanopusSetBootPersistenceParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    corelib::device::canopus::set_boot_persistence(&addr, p.pinned).await?;
+    Ok(Value::Null)
+}
+
+// ------------------------------------------------------------ canopus connect
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectParams {
+    /// Module id (ADR-CAN-003).
+    module: String,
+    /// connectListen: start (default) or stop the module's pushes.
+    #[serde(default = "yes")]
+    enable: bool,
+    /// connectSend: 1 text, 2 binary (default).
+    #[serde(default = "default_connect_kind")]
+    kind: u8,
+    /// connectSend: the message as hex (binary) or `text`.
+    #[serde(default)]
+    data_hex: String,
+    #[serde(default)]
+    text: String,
+}
+
+fn yes() -> bool {
+    true
+}
+
+fn default_connect_kind() -> u8 {
+    2
+}
+
+fn from_hex(text: &str) -> Result<Vec<u8>, String> {
+    if !text.len().is_multiple_of(2) {
+        return Err("dataHex has an odd length".into());
+    }
+    (0..text.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&text[i..i + 2], 16).map_err(|_| "dataHex is not hex".to_string()))
+        .collect()
+}
+
+/// CanopusConnect: registers (or removes) the phone as the listener of a module.
+/// The device pushes incoming messages which the bridge forwards as `{"type":"connect",...}` events.
+pub async fn connect_listen(p: ConnectParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    if p.enable {
+        corelib::device::canopus::connect::subscribe(&addr, &p.module).await?;
+    } else {
+        corelib::device::canopus::connect::unsubscribe(&addr, &p.module).await?;
+    }
+    Ok(Value::Null)
+}
+
+/// CanopusConnect: one message to the module's listener.
+pub async fn connect_send(p: ConnectParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    let payload = if p.kind == 1 || (!p.text.is_empty() && p.data_hex.is_empty()) {
+        corelib::device::canopus::connect::ConnectPayload::Text(p.text)
+    } else {
+        corelib::device::canopus::connect::ConnectPayload::Binary(from_hex(&p.data_hex)?)
+    };
+    corelib::device::canopus::connect::send(&addr, &p.module, payload).await?;
+    Ok(Value::Null)
+}
+
+// ------------------------------------------------------------ core rpc layer
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallRpcParams {
+    pub method: String,
+    #[serde(default)]
+    pub params: Value,
+}
+
+pub async fn call_rpc(id: u64, p: CallRpcParams) -> Result<Value, String> {
+    call_named_rpc(id, &p.method, p.params).await
+}
+
+#[allow(clippy::collapsible_if)]
+pub async fn call_named_rpc(id: u64, method: &str, mut args: Value) -> Result<Value, String> {
+    if let Value::Object(ref mut map) = args {
+        if !map.contains_key("addr") {
+            if let Ok(addr) = connected_addr() {
+                map.insert("addr".to_string(), Value::String(addr));
+            }
+        }
+    }
+    let progress: corelib::rpc::Progress = Arc::new(move |val| {
+        if let Some(pg) = val.get("progress").and_then(|v| v.as_f64()) {
+            let msg = val.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            host::emit_progress(id, pg as f32, msg);
+        } else {
+            host::emit(serde_json::json!({
+                "type": "rpcProgress",
+                "id": id,
+                "data": val,
+            }));
+        }
+    });
+    corelib::rpc::call(method, args, Some(progress))
+        .await
+        .map_err(|e| format!("{e:#}"))
+}
+
 // ------------------------------------------------------------ notifications
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotificationParams {
-    /// Namespace the band groups the notification under (one "app" per source).
     #[serde(default = "default_notification_source")]
     source: String,
-    /// Reusing an id replaces that notification.
     #[serde(default)]
     id: u32,
     #[serde(default = "default_notification_app")]
@@ -408,88 +598,4 @@ pub async fn send_notification(p: NotificationParams) -> Result<Value, String> {
     };
     corelib::device::notification::send(addr, p.source, content).await.map_err(|e| format!("{e:#}"))?;
     Ok(Value::Null)
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConnectParams {
-    /// Module id (ADR-CAN-003).
-    module: String,
-    /// connectListen: start (default) or stop the module's pushes.
-    #[serde(default = "yes")]
-    enable: bool,
-    /// connectSend: 1 text, 2 binary (default).
-    #[serde(default = "binary")]
-    kind: u8,
-    /// connectSend: the message as hex (binary) or `text`.
-    #[serde(default)]
-    data_hex: String,
-    #[serde(default)]
-    text: String,
-}
-
-fn yes() -> bool {
-    true
-}
-
-fn binary() -> u8 {
-    corelib::device::canopus::CONNECT_BINARY
-}
-
-fn from_hex(text: &str) -> Result<Vec<u8>, String> {
-    if text.len() % 2 != 0 {
-        return Err("dataHex has an odd length".into());
-    }
-    (0..text.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&text[i..i + 2], 16).map_err(|_| "dataHex is not hex".to_string()))
-        .collect()
-}
-
-/// CanopusConnect: registers (or removes) the phone as the listener of a module and
-/// starts printing the module's messages as `{"type":"connect",...}` events.
-pub async fn connect_listen(p: ConnectParams) -> Result<Value, String> {
-    let addr = connected_addr()?;
-    if p.enable {
-        subscribe_connect_events(&addr)?;
-    }
-    corelib::device::canopus::connect_listen(&addr, &p.module, p.enable).await?;
-    Ok(Value::Null)
-}
-
-/// CanopusConnect: one message to the module's listener.
-pub async fn connect_send(p: ConnectParams) -> Result<Value, String> {
-    let addr = connected_addr()?;
-    let data = if p.kind == corelib::device::canopus::CONNECT_TEXT {
-        p.text.into_bytes()
-    } else {
-        from_hex(&p.data_hex)?
-    };
-    corelib::device::canopus::connect_send(&addr, &p.module, p.kind, &data).await?;
-    Ok(Value::Null)
-}
-
-static CONNECT_PUMP: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
-
-/// Forwards the device's CanopusConnect messages to the callback (once per device).
-fn subscribe_connect_events(addr: &str) -> Result<(), String> {
-    let mut subscribed = CONNECT_PUMP.lock().unwrap();
-    if subscribed.as_deref() == Some(addr) {
-        return Ok(());
-    }
-    let mut rx = corelib::device::canopus::connect_subscribe(addr)?;
-    *subscribed = Some(addr.to_string());
-    let Some(rt) = host::runtime() else { return Ok(()) };
-    rt.spawn(async move {
-        while let Some(message) = rx.recv().await {
-            let data_hex: String = message.data.iter().map(|b| format!("{b:02x}")).collect();
-            host::emit(serde_json::json!({
-                "type": "connect",
-                "module": message.module_id,
-                "kind": message.kind,
-                "dataHex": data_hex,
-            }));
-        }
-    });
-    Ok(())
 }

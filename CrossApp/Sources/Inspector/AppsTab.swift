@@ -68,7 +68,7 @@ struct AppsTab: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("Install")
-                                Footnote(".rpk quick apps or watchface packages")
+                                Footnote(".canopus, .rpk quick apps, or watchface packages")
                             }
                             Spacer()
                             Button("Choose…") { choose() }
@@ -147,7 +147,7 @@ struct AppsTab: View {
         Task {
             guard let url = await chooseFile(title: "Install on \(device.name)", defaultButtonLabel: "Install") else { return }
             guard let kind = AstroBoxService.Kind.of(url) else {
-                model.report("Unsupported file", "\(url.lastPathComponent): install .rpk quick apps or watchface packages (.bin, .mwz).")
+                model.report("Unsupported file", "\(url.lastPathComponent): install .rpk quick apps, Canopus packages (.canopus), or watchface packages (.bin, .mwz).")
                 return
             }
             await model.astrobox.install(url, kind: kind)

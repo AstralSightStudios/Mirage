@@ -179,12 +179,13 @@ final class AstroBoxService {
     // MARK: Apps
 
     enum Kind: String {
-        case watchface, quickapp
+        case watchface, quickapp, canopus
 
         static func of(_ url: URL) -> Kind? {
             switch url.pathExtension.lowercased() {
             case "rpk": return .quickapp
             case "bin", "mwz", "face", "zip": return .watchface
+            case "canopus": return .canopus
             default: return nil
             }
         }

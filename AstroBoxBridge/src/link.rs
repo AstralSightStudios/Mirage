@@ -241,7 +241,7 @@ async fn connect_inner(
         if let Err(err) = blocking(|| bridge().rescan()).await? {
             // "refused" means the previous inquiry is still running (HCI
             // command disallowed): keep waiting for its results.
-            if !format!("{err}").contains("refused") {
+            if !err.to_string().contains("refused") {
                 return Err(format!("inquiry failed: {err}"));
             }
             log::info!(target: "mirage", "inquiry still running; waiting");

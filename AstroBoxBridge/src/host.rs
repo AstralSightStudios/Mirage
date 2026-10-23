@@ -49,11 +49,77 @@ pub fn init(cb: Option<MabCallback>, ctx: *mut c_void) {
             .thread_name("mirage-ab-rt")
             .build()
             .expect("failed to start the tokio runtime");
-        let _ = RUNTIME.set(rt);
 
         // the companion core's ECS world lives on its own thread; start it once.
         corelib::ecs::init_runtime_default();
+        spawn_core_event_pump(rt.handle());
         log::info!(target: "mirage", "mirage companion core {} ready", env!("CARGO_PKG_VERSION"));
+
+        let _ = RUNTIME.set(rt);
+    });
+}
+
+fn spawn_core_event_pump(handle: &tokio::runtime::Handle) {
+    let mut rx = corelib::events::subscribe();
+    handle.spawn(async move {
+        loop {
+            match rx.recv().await {
+                Ok(event) => match event {
+                    corelib::events::CoreEvent::CanopusConnectMessage(msg) => {
+                        let (kind, text, data_hex) = match msg.payload {
+                            corelib::device::canopus::connect::ConnectPayload::Text(ref text) => {
+                                (
+                                    1u8,
+                                    text.clone(),
+                                    text.as_bytes().iter().map(|b| format!("{b:02x}")).collect::<String>(),
+                                )
+                            }
+                            corelib::device::canopus::connect::ConnectPayload::Binary(ref bin) => {
+                                (
+                                    2u8,
+                                    String::new(),
+                                    bin.iter().map(|b| format!("{b:02x}")).collect::<String>(),
+                                )
+                            }
+                        };
+                        emit(json!({
+                            "type": "connect",
+                            "device": msg.device_addr,
+                            "module": msg.module,
+                            "kind": kind,
+                            "text": text,
+                            "dataHex": data_hex,
+                        }));
+                    }
+                    corelib::events::CoreEvent::SharedLinkDetected(detected) => {
+                        emit(json!({
+                            "type": "sharedLinkDetected",
+                            "device": detected.device_addr,
+                        }));
+                    }
+                    corelib::events::CoreEvent::DeviceStateChanged(state) => {
+                        emit(json!({
+                            "type": "deviceStateChanged",
+                            "device": state.device_addr,
+                        }));
+                    }
+                    corelib::events::CoreEvent::InterconnectMessage(msg) => {
+                        emit(json!({
+                            "type": "interconnect",
+                            "device": msg.device_addr,
+                            "packageName": msg.pkg_name,
+                            "payloadHex": msg.payload.iter().map(|b| format!("{b:02x}")).collect::<String>(),
+                        }));
+                    }
+                },
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(missed)) => {
+                    log::warn!(target: "mirage", "core event pump lagged, missed {missed} events");
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    break;
+                }
+            }
+        }
     });
 }
 

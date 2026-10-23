@@ -71,12 +71,12 @@ struct AppsTab: View {
         }
     }
 
-    static let types: [UTType] = [UTType(filenameExtension: "rpk") ?? .data, UTType(filenameExtension: "mwz") ?? .data, .data]
+    static let types: [UTType] = [UTType(filenameExtension: "rpk") ?? .data, UTType(filenameExtension: "mwz") ?? .data, UTType(filenameExtension: "canopus") ?? .data, .data]
 
     private func install(_ urls: [URL]) {
         for url in urls {
             guard let kind = AstroBoxService.Kind.of(url) else {
-                model.report("Unsupported file", "\(url.lastPathComponent): install .rpk quick apps or watchface packages (.bin, .mwz).")
+                model.report("Unsupported file", "\(url.lastPathComponent): install .rpk quick apps, Canopus packages (.canopus), or watchface packages (.bin, .mwz).")
                 continue
             }
             let access = url.startAccessingSecurityScopedResource()
@@ -140,7 +140,7 @@ struct AppsTab: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Install")
-                    Text("Drop .rpk quick apps or watchface packages here").font(.caption).foregroundStyle(.secondary)
+                    Text("Drop .canopus, .rpk quick apps, or watchface packages here").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("Choose…") { importing = true }.controlSize(.small)

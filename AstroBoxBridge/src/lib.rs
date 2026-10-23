@@ -22,6 +22,7 @@ static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Start the bridge (idempotent). Later calls only replace the callback.
 #[unsafe(no_mangle)]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn mab_init(cb: Option<MabCallback>, ctx: *mut c_void) {
     let _ = catch_unwind(AssertUnwindSafe(|| host::init(cb, ctx)));
 }
@@ -29,6 +30,7 @@ pub extern "C" fn mab_init(cb: Option<MabCallback>, ctx: *mut c_void) {
 /// Queue `method` with `params_json` (NULL or "" means `{}`); returns the
 /// request id, or 0 when `mab_init` has not been called yet.
 #[unsafe(no_mangle)]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn mab_call(method: *const c_char, params_json: *const c_char) -> u64 {
     if host::runtime().is_none() {
         return 0;
@@ -94,12 +96,28 @@ async fn handle(id: u64, method: &str, params: Value) -> Result<Value, String> {
         "removeWatchface" => ops::remove_watchface(parse(params)?).await,
         "quickApps" => ops::quick_apps().await,
         "canopusModules" => ops::canopus_modules().await,
+        "canopusDeviceInfo" => ops::canopus_device_info().await,
+        "canopusQueryModule" => ops::canopus_query_module(parse(params)?).await,
+        "canopusSetEnabled" => ops::canopus_set_enabled(parse(params)?).await,
+        "canopusRemove" => ops::canopus_remove(parse(params)?).await,
+        "canopusScan" => ops::canopus_scan().await,
+        "canopusExitSafeMode" => ops::canopus_exit_safe_mode(parse(params)?).await,
+        "canopusGetBootPersistence" => ops::canopus_get_boot_persistence().await,
+        "canopusSetBootPersistence" => ops::canopus_set_boot_persistence(parse(params)?).await,
         "connectListen" => ops::connect_listen(parse(params)?).await,
         "connectSend" => ops::connect_send(parse(params)?).await,
         "launchQuickApp" => ops::launch_quick_app(parse(params)?).await,
         "removeQuickApp" => ops::remove_quick_app(parse(params)?).await,
         "sendNotification" => ops::send_notification(parse(params)?).await,
+        "callRpc" => ops::call_rpc(id, parse(params)?).await,
+        "rpcMethods" => Ok(serde_json::to_value(corelib::rpc::methods()).unwrap()),
         "" => Err("missing method name".to_string()),
-        other => Err(format!("unknown method `{other}`")),
+        other => {
+            if corelib::rpc::methods().contains(&other) {
+                ops::call_named_rpc(id, other, params).await
+            } else {
+                Err(format!("unknown method `{other}`"))
+            }
+        }
     }
 }
