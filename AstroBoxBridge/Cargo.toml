@@ -11,9 +11,13 @@ crate-type = ["staticlib"]
 path = "src/lib.rs"
 
 [dependencies]
-corelib = { path = "../External/AstroBox/modules/core" }
-bluetooth = { path = "../External/AstroBox/modules/bluetooth" }
-pb = { path = "../External/AstroBox/modules/pb" }
+# Real AstroBox source tree (AstroBox-NG) rather than the Mirage
+# `External/AstroBox` submodule pins: the CPC2 26/27/28 resource staging and
+# the Canopus ABI 2.0 alignment live in this working tree, and the submodules
+# are still pinned at revisions without them.
+corelib = { path = "../../AstroBox-NG/src-tauri/modules/core" }
+bluetooth = { path = "../../AstroBox-NG/src-tauri/modules/bluetooth" }
+pb = { path = "../../AstroBox-NG/src-tauri/modules/pb" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "fs"] }
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
@@ -27,6 +31,5 @@ zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 [profile.release]
 panic = "unwind"
 
-# frontbridge (pulled in by `bluetooth`) has a Linux-only path dependency on
-# `../../vendor/tauri-runtime-cef`, which is satisfied by the stub at
-# `External/AstroBox/vendor/tauri-runtime-cef`.
+# frontbridge (pulled in by `bluetooth`) resolves its Linux-only
+# `../../vendor/tauri-runtime-cef` dependency inside the AstroBox-NG tree.

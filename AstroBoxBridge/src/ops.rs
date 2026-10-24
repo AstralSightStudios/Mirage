@@ -50,6 +50,8 @@ async fn await_reply<T>(rx: oneshot::Receiver<anyhow::Result<T>>, what: &str) ->
 pub enum InstallKind {
     Watchface,
     Quickapp,
+    /// Native `.canopus` package: installed over the encrypted CPC2 staging
+    /// service (`corelib::device::canopus::install_native_package`), not Mass.
     Canopus,
 }
 
@@ -122,18 +124,28 @@ pub async fn install(id: u64, p: InstallParams) -> Result<Value, String> {
         return Err(format!("{} is empty", p.path.display()));
     }
 
+    // Native Canopus packages take the CPC2 staging path (receipt + ELF +
+    // resources), so they bypass the Mass quick-app/watchface transfer below.
     if p.kind == InstallKind::Canopus {
-        let outcome = corelib::device::canopus::install_native_package(
-            &addr,
-            &file,
-            Arc::new(move |progress| host::emit_progress(id, progress, "Sending Canopus module")),
-        )
-        .await?;
-        return serde_json::to_value(outcome).map_err(|e| e.to_string());
+        let started = Instant::now();
+        let progress = Arc::new(move |value: f32| {
+            host::emit_progress(id, value, "Installing native Canopus package")
+        });
+        let outcome = corelib::device::canopus::install_native_package(&addr, &file, progress)
+            .await
+            .map_err(|e| format!("Canopus install failed: {e}"))?;
+        return Ok(json!({
+            "ok": true,
+            "kind": "canopus",
+            "moduleId": outcome.module_id,
+            "targetId": outcome.target_id,
+            "rebootRequired": outcome.reboot_required,
+            "bytes": file.len(),
+            "elapsedSecs": started.elapsed().as_secs_f64(),
+        }));
     }
-
     let (data_type, payload, package_name, mut result) = match p.kind {
-        InstallKind::Canopus => unreachable!(),
+        InstallKind::Canopus => unreachable!("handled by the native install path above"),
         InstallKind::Quickapp => {
             let manifest = read_rpk_manifest(&file);
             let package = match p.package_name.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
