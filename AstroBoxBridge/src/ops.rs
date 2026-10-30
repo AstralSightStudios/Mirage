@@ -128,9 +128,15 @@ pub async fn install(id: u64, p: InstallParams) -> Result<Value, String> {
     // resources), so they bypass the Mass quick-app/watchface transfer below.
     if p.kind == InstallKind::Canopus {
         let started = Instant::now();
-        let progress = Arc::new(move |value: f32| {
-            host::emit_progress(id, value, "Installing native Canopus package")
-        });
+        let progress = Arc::new(
+            move |value: f32, phase: corelib::device::canopus::CanopusInstallPhase| {
+                host::emit_progress(
+                    id,
+                    value,
+                    &format!("Installing native Canopus package: {phase:?}"),
+                )
+            },
+        );
         let outcome = corelib::device::canopus::install_native_package(&addr, &file, progress)
             .await
             .map_err(|e| format!("Canopus install failed: {e}"))?;
