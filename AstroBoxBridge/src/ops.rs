@@ -429,6 +429,12 @@ pub struct CanopusModuleIdParams {
     pub module: String,
 }
 
+pub async fn canopus_activate(p: CanopusModuleIdParams) -> Result<Value, String> {
+    let addr = connected_addr()?;
+    corelib::device::canopus::activate_module_cpc2(&addr, &p.module).await?;
+    Ok(Value::Null)
+}
+
 pub async fn canopus_remove(p: CanopusModuleIdParams) -> Result<Value, String> {
     let addr = connected_addr()?;
     corelib::device::canopus::remove_module_cpc2(&addr, &p.module).await?;

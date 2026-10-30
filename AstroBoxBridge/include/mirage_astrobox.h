@@ -51,6 +51,7 @@
  *   canopusDeviceInfo         {} → {frameworkRevision, safeMode, moduleCount, safeModeReason, errorCode, flags, scanSummary, targetId?}
  *   canopusQueryModule        {slot?|module?} → ModuleItem|null
  *   canopusSetEnabled         {module, enabled:bool} → null
+ *   canopusActivate           {module} → null only after native activation completes
  *   canopusRemove             {module} → null
  *   canopusScan               {} → null
  *   canopusExitSafeMode       {action:"keep"|"disableAll"|"rollbackAll"} → null

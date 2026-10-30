@@ -99,6 +99,7 @@ async fn handle(id: u64, method: &str, params: Value) -> Result<Value, String> {
         "canopusDeviceInfo" => ops::canopus_device_info().await,
         "canopusQueryModule" => ops::canopus_query_module(parse(params)?).await,
         "canopusSetEnabled" => ops::canopus_set_enabled(parse(params)?).await,
+        "canopusActivate" => ops::canopus_activate(parse(params)?).await,
         "canopusRemove" => ops::canopus_remove(parse(params)?).await,
         "canopusScan" => ops::canopus_scan().await,
         "canopusExitSafeMode" => ops::canopus_exit_safe_mode(parse(params)?).await,
