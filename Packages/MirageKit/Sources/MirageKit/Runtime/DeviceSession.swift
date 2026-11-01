@@ -260,6 +260,11 @@ public final class DeviceSession {
     private func teardown() {
         bootTask?.cancel()
         bootTask = nil
+        #if os(Windows)
+        pendingTouch?.cancel()
+        pendingTouch = nil
+        touchDown = false
+        #endif
         qmp?.close()
         vnc?.close()
         console?.close()
@@ -472,9 +477,41 @@ public final class DeviceSession {
         return NSHOutput.body(text, command: command)
     }
 
+    #if os(Windows)
+    @ObservationIgnored private var pendingTouch: Task<Void, Never>?
+    @ObservationIgnored private var touchDown = false
+    #endif
+
     /// Finger at panel pixel coordinates.
     public func touch(x: Int, y: Int, down: Bool) {
+        #if os(Windows)
+        // Keep Windows pointer events ordered on the session's QMP connection.
+        // A short sampling interval lets the emulated touch IRQ complete even
+        // when the host sends a press and release in the same message batch.
+        guard let qmp, let size = screenSize else { return }
+        let previous = pendingTouch
+        let transition = touchDown != down
+        touchDown = down
+        let normalizedX = Double(x) / max(size.width - 1, 1)
+        let normalizedY = Double(y) / max(size.height - 1, 1)
+        // WinUI's idle run-loop tick can exceed the 500 ms double-tap window.
+        // QMP socket I/O is thread-safe and does not require the UI actor.
+        pendingTouch = Task.detached {
+            await previous?.value
+            guard !Task.isCancelled else { return }
+            // WinUI can coalesce the last move into pointerReleased. Zinitix
+            // reports UP at its last sampled DOWN coordinate, so deliver the
+            // release position as motion before lifting the finger.
+            if transition && !down {
+                try? await qmp.touch(x: normalizedX, y: normalizedY, down: nil)
+                try? await Task.sleep(nanoseconds: 20_000_000)
+            }
+            try? await qmp.touch(x: normalizedX, y: normalizedY, down: down)
+            if transition { try? await Task.sleep(nanoseconds: 60_000_000) }
+        }
+        #else
         vnc?.pointer(x: x, y: y, pressed: down)
+        #endif
     }
 
     public func button(_ qcode: String, down: Bool) async {

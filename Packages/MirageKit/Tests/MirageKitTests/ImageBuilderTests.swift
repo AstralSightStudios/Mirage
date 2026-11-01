@@ -21,6 +21,22 @@ import Testing
     #expect(i?.kind == "from_v3.100.170_incremental")
 }
 
+@Test(arguments: ["q65", "q65gl"]) func officialDownloadImport(model: String) async throws {
+    let fm = FileManager.default
+    let tmp = fm.temporaryDirectory.appendingPathComponent("mirage-import-\(UUID().uuidString)")
+    defer { try? fm.removeItem(at: tmp) }
+    let source = tmp.appendingPathComponent("hash_upd_miwear.watch.\(model)")
+    try fm.createDirectory(at: source, withIntermediateDirectories: true)
+    let ap = Data("CHIP=best1502p\nro.build.version=4.100.087\nmiwear.watch.q65\0miwear.watch.q65gl\0".utf8)
+    try ap.write(to: source.appendingPathComponent("vela_ap.bin"))
+    let library = try MirageLibrary(root: tmp.appendingPathComponent("Library"))
+    let fw = try await FirmwareImporter(library: library).importPackage(at: source)
+    #expect(fw.product == "miwear.watch.\(model)")
+    #expect(fw.version == "4.100.087")
+    #expect(fw.id == "miwear.watch.\(model)_v4.100.087_full_imported")
+    #expect(try Data(contentsOf: library.firmwareDirectory(fw.id).appendingPathComponent("vela_ap.bin")) == ap)
+}
+
 @Test func nshOutput() {
     let text = "ps\r\n  PID GROUP\r\n    0     0 Idle\r\nap> \u{1B}[K"
     #expect(NSHOutput.isComplete(text, command: "ps"))

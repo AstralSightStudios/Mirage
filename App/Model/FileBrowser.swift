@@ -268,8 +268,10 @@ final class FileBrowser {
         let target = path
         await run(urls.count == 1 ? "Copying \(urls[0].lastPathComponent)" : "Copying \(urls.count) items") { progress in
             for url in urls {
+                #if os(macOS)
                 let access = url.startAccessingSecurityScopedResource()
                 defer { if access { url.stopAccessingSecurityScopedResource() } }
+                #endif
                 try await Self.copyIn(url, to: GuestPath.join(target, url.lastPathComponent), fs: fs, progress: progress)
             }
         }
@@ -341,8 +343,10 @@ final class FileBrowser {
     func replaceImage(with url: URL) async {
         guard let volume = replaceableVolume, let device, let profile = model.profile(device.profileID) else { return }
         await run("Writing \(url.lastPathComponent) to \(volume.title)") { _ in
+            #if os(macOS)
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
+            #endif
             try await Task.detached { try DeviceFiles.replaceImage(volume, with: url, profile: profile) }.value
         }
         fs = nil

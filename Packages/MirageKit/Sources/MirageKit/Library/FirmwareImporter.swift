@@ -67,7 +67,10 @@ public struct FirmwareImporter: Sendable {
         let base = isDir.boolValue ? try Self.findPackageRoot(in: source).lastPathComponent
                                    : source.deletingPathExtension().lastPathComponent
         let parsed = ProductCatalog.parsePackageName(base)
-        guard let product = parsed?.product ?? (info.products.count == 1 ? info.products.first : nil) else {
+        // Official downloads also use <hash>_upd_<product>; match the AP image
+        // so shared regional images don't force the user to rename the package.
+        let namedProduct = info.products.first { base.hasSuffix("_upd_\($0)") }
+        guard let product = parsed?.product ?? namedProduct ?? (info.products.count == 1 ? info.products.first : nil) else {
             throw MirageError.invalid("Cannot tell which product this firmware is for (name the package <product>_v<version>_full_<hash>)")
         }
         let version = info.version ?? parsed?.version ?? "unknown"

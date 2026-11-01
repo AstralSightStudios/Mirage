@@ -19,6 +19,9 @@ struct DeviceScreen: WinUIElementRepresentable {
     @MainActor
     final class Coordinator {
         let feed = ScreenFeed()
+        // The native parent retains the COM object, but not its Swift wrapper.
+        // Keep the wrapper alive for the weak frame callback below.
+        var image: WinUI.Image?
         var bitmap: WriteableBitmap?
         var pressed = false
     }
@@ -36,6 +39,7 @@ struct DeviceScreen: WinUIElementRepresentable {
         border.background = brush
 
         let c = context.coordinator
+        c.image = image
         c.feed.onFrame = { [weak image, weak c] frame in
             guard let image, let c else { return }
             Self.show(frame, in: image, coordinator: c)

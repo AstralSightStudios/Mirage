@@ -4,12 +4,25 @@
 // macOS app is the SwiftUI one in Mirage.xcodeproj. Both compile the same
 // models from App/Model.
 import PackageDescription
+import Foundation
+
+#if os(Windows)
+// These transitive versions support the stable Swift 6.3 toolchain.
+let toolchainDependencies: [Package.Dependency] = [
+    .package(url: "https://github.com/apple/swift-collections", exact: "1.6.0"),
+    .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", exact: "1.11.0"),
+]
+#else
+let toolchainDependencies: [Package.Dependency] = []
+#endif
 
 let root = Context.packageDirectory
 let companionCoreLib = "\(root)/AstroBoxBridge/target/release"
 // The companion core (AstroBoxBridge, Rust) builds for macOS and Windows; on
 // Linux AstroBox's frontbridge needs its CEF runtime, so that build leaves it out.
-let companionCoreHosts: [Platform] = [.macOS, .windows]
+// Allow the Windows device UI to run without the optional companion bridge.
+let withoutWindowsCompanion = ProcessInfo.processInfo.environment["MIRAGE_NO_COMPANION"] == "1"
+let companionCoreHosts: [Platform] = withoutWindowsCompanion ? [.macOS] : [.macOS, .windows]
 let withCompanionCore = TargetDependencyCondition.when(platforms: companionCoreHosts)
 let companionCorePlatforms = BuildSettingCondition.when(platforms: companionCoreHosts)
 
@@ -23,7 +36,7 @@ let package = Package(
         .package(path: "Packages/MirageKit"),
         .package(url: "https://github.com/moreSwift/swift-cross-ui",
                  revision: "0f3ec3958b79cdc39a1a3e604516b71ab33a9043"),
-    ],
+    ] + toolchainDependencies,
     targets: [
         .systemLibrary(name: "CMirageAstroBox", path: "CrossApp/CMirageAstroBox"),
         .executableTarget(
@@ -51,6 +64,8 @@ let package = Package(
                 .swiftLanguageMode(.v5),
             ],
             linkerSettings: [
+                // SwiftCrossUI's nested generic view metadata exceeds the PE default stack.
+                .unsafeFlags(["-Xlinker", "/STACK:16777216"], .when(platforms: [.windows])),
                 .unsafeFlags(["-L", companionCoreLib], companionCorePlatforms),
                 .linkedFramework("CoreAudio", .when(platforms: [.macOS])),
                 .linkedFramework("Security", .when(platforms: [.macOS])),
@@ -73,9 +88,10 @@ let package = Package(
                 .linkedLibrary("userenv", .when(platforms: [.windows])),
                 .linkedLibrary("ws2_32", .when(platforms: [.windows])),
                 .linkedLibrary("dbghelp", .when(platforms: [.windows])),
+            ] + (withoutWindowsCompanion ? [] : [
                 .linkedLibrary("windows.0.48.5", .when(platforms: [.windows])),
                 .linkedLibrary("windows.0.52.0", .when(platforms: [.windows])),
-            ]
+            ])
         ),
     ]
 )
