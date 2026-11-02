@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -273,7 +273,6 @@
 				E6F91CF4043D296F6216905B /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 				7A072CA61B3FD1CD9D1A2C39 /* XCLocalSwiftPackageReference "Packages/MirageKit" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -371,6 +370,7 @@
 		79C1EAB9F8AFBD873672F40F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Resources/Mirage.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -386,18 +386,30 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lmirage_astrobox",
-					"-framework CoreAudio",
-					"-framework Security",
-					"-framework IOKit",
-					"-framework IOBluetooth",
-					"-framework CoreBluetooth",
-					"-framework WebKit",
-					"-framework ApplicationServices",
-					"-framework CoreGraphics",
-					"-framework Carbon",
-					"-framework CoreVideo",
-					"-framework CoreFoundation",
-					"-framework AppKit",
+					"-framework",
+					CoreAudio,
+					"-framework",
+					Security,
+					"-framework",
+					IOKit,
+					"-framework",
+					IOBluetooth,
+					"-framework",
+					CoreBluetooth,
+					"-framework",
+					WebKit,
+					"-framework",
+					ApplicationServices,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Carbon,
+					"-framework",
+					CoreVideo,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					AppKit,
 					"-liconv",
 					"-lobjc",
 					"-lc",
@@ -413,6 +425,7 @@
 		9D8C3F682E846E92C1216F90 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.0;
@@ -422,6 +435,7 @@
 		D4C2A33C80D68A03455FA199 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.0;
@@ -431,6 +445,7 @@
 		F892431146CEB0352DEBF2E2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Resources/Mirage.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -446,18 +461,30 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lmirage_astrobox",
-					"-framework CoreAudio",
-					"-framework Security",
-					"-framework IOKit",
-					"-framework IOBluetooth",
-					"-framework CoreBluetooth",
-					"-framework WebKit",
-					"-framework ApplicationServices",
-					"-framework CoreGraphics",
-					"-framework Carbon",
-					"-framework CoreVideo",
-					"-framework CoreFoundation",
-					"-framework AppKit",
+					"-framework",
+					CoreAudio,
+					"-framework",
+					Security,
+					"-framework",
+					IOKit,
+					"-framework",
+					IOBluetooth,
+					"-framework",
+					CoreBluetooth,
+					"-framework",
+					WebKit,
+					"-framework",
+					ApplicationServices,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Carbon,
+					"-framework",
+					CoreVideo,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					AppKit,
 					"-liconv",
 					"-lobjc",
 					"-lc",
