@@ -48,6 +48,21 @@
    swift run --package-path Packages/MirageKit miragectl --help
    ```
 
+### Windows
+
+需要 Swift 6.3、MSVC Build Tools、Windows SDK 和 Rust。在 VS Developer PowerShell 中构建：
+
+```powershell
+.\Scripts\build-companion-core.ps1
+.\Scripts\build-windows.ps1 -c release
+```
+
+companion core 使用同级 `AstroBox-NG` 的组件源码，路径见 `AstroBoxBridge/Cargo.toml`。
+
+Windows 构建脚本自动应用 `Scripts/Patches/` 中的 WinUI 补丁，修复主线程初始化、窗口与对话框
+生命周期、文件夹选择及 Win10 缺少 Win11 包依赖 API 时的加载问题。补丁可重复应用，不影响
+macOS/Linux 构建。运行需安装 Windows App Runtime 1.5；Win10 实机验证仍待完成。
+
 ---
 
 ## 许可证

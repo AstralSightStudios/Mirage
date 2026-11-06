@@ -57,8 +57,8 @@ jobs:
       - name: Setup Swift
         uses: compnerd/gha-setup-swift@v0.3.0
         with:
-          branch: swift-6.1-release
-          tag: 6.1-RELEASE
+          branch: swift-6.3-release
+          tag: 6.3-RELEASE
       - name: Swift version
         run: swift --version
       - name: Companion core
@@ -66,7 +66,7 @@ jobs:
       - name: MirageKit tests
         run: swift test --package-path Packages/MirageKit
       - name: Build Mirage
-        run: swift build -c release --product Mirage
+        run: Scripts/build-windows.ps1 -c release
       - uses: actions/download-artifact@v4
         with:
           name: qemu-windows
