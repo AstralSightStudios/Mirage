@@ -1,1 +1,3 @@
 Scripts/Patches/*.patch -text -whitespace
+*.ico binary
+*.res binary

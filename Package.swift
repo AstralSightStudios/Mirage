@@ -56,9 +56,13 @@ let package = Package(
             exclude: [
                 "External", "AstroBoxBridge", "Packages", "Scripts", "Mirage.xcodeproj",
                 "App/Views", "App/Resources", "App/MirageApp.swift", "CrossApp/CMirageAstroBox",
+                "CrossApp/Windows/Mirage.rc", "CrossApp/Windows/Mirage.res",
                 "README.md", "project.yml", "LICENSE",
             ],
             sources: ["CrossApp/Sources", "App/Model"],
+            resources: [
+                .copy("CrossApp/Windows/Mirage.ico"),
+            ],
             swiftSettings: [
                 .define("MIRAGE_ASTROBOX", companionCorePlatforms),
                 .swiftLanguageMode(.v5),
@@ -66,6 +70,12 @@ let package = Package(
             linkerSettings: [
                 // SwiftCrossUI's nested generic view metadata exceeds the PE default stack.
                 .unsafeFlags(["-Xlinker", "/STACK:16777216"], .when(platforms: [.windows])),
+                // Embeds the app icon in Mirage.exe (Explorer, shortcuts and the
+                // window icon that WinUI copies into the taskbar).
+                .unsafeFlags(
+                    ["-Xlinker", "\(root)/CrossApp/Windows/Mirage.res"],
+                    .when(platforms: [.windows])
+                ),
                 .unsafeFlags(["-L", companionCoreLib], companionCorePlatforms),
                 .linkedFramework("CoreAudio", .when(platforms: [.macOS])),
                 .linkedFramework("Security", .when(platforms: [.macOS])),

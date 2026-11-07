@@ -3,6 +3,30 @@ param([Parameter(ValueFromRemainingArguments=$true)][string[]]$BuildArguments)
 $ErrorActionPreference = 'Stop'
 $mirageRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
+# Regenerate the Win32 icon resource when it is missing or older than its sources.
+$iconDirectory = Join-Path $mirageRoot 'CrossApp/Windows'
+$iconSource = Join-Path $iconDirectory 'Mirage.ico'
+$iconScript = Join-Path $iconDirectory 'Mirage.rc'
+$iconResource = Join-Path $iconDirectory 'Mirage.res'
+$iconIsStale = (
+    -not (Test-Path -LiteralPath $iconResource) -or
+    (Get-Item -LiteralPath $iconSource).LastWriteTimeUtc -gt (Get-Item -LiteralPath $iconResource).LastWriteTimeUtc -or
+    (Get-Item -LiteralPath $iconScript).LastWriteTimeUtc -gt (Get-Item -LiteralPath $iconResource).LastWriteTimeUtc
+)
+if ($iconIsStale) {
+    $resourceCompiler = Get-Command rc.exe -ErrorAction SilentlyContinue
+    if (-not $resourceCompiler) {
+        throw 'rc.exe was not found. Run this script from a VS Developer PowerShell.'
+    }
+    Push-Location -LiteralPath $iconDirectory
+    try {
+        & $resourceCompiler.Source /nologo /fo $iconResource 'Mirage.rc'
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot compile the Windows app icon resource' }
+    } finally {
+        Pop-Location
+    }
+}
+
 & swift package --package-path $mirageRoot resolve
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve Mirage dependencies' }
 
