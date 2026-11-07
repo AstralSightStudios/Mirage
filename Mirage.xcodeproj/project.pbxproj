@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -263,7 +263,6 @@
 				};
 			};
 			buildConfigurationList = FA753B8BD8333853E63810A1 /* Build configuration list for PBXProject "Mirage" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -276,6 +275,8 @@
 				E6F91CF4043D296F6216905B /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 				7A072CA61B3FD1CD9D1A2C39 /* XCLocalSwiftPackageReference "Packages/MirageKit" */,
 			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3E514C3C34FE85763C0BDEC4 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -374,7 +375,6 @@
 		79C1EAB9F8AFBD873672F40F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = Mirage;
 				CODE_SIGN_ENTITLEMENTS = App/Resources/Mirage.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -385,35 +385,27 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/include";
 				INFOPLIST_FILE = App/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/target/release";
 				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lmirage_astrobox",
-					"-framework",
-					CoreAudio,
-					"-framework",
-					Security,
-					"-framework",
-					IOKit,
-					"-framework",
-					IOBluetooth,
-					"-framework",
-					CoreBluetooth,
-					"-framework",
-					WebKit,
-					"-framework",
-					ApplicationServices,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Carbon,
-					"-framework",
-					CoreVideo,
-					"-framework",
-					CoreFoundation,
-					"-framework",
-					AppKit,
+					"-framework CoreAudio",
+					"-framework Security",
+					"-framework IOKit",
+					"-framework IOBluetooth",
+					"-framework CoreBluetooth",
+					"-framework WebKit",
+					"-framework ApplicationServices",
+					"-framework CoreGraphics",
+					"-framework Carbon",
+					"-framework CoreVideo",
+					"-framework CoreFoundation",
+					"-framework AppKit",
 					"-liconv",
 					"-lobjc",
 					"-lc",
@@ -421,6 +413,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = moe.astralsight.mirage;
 				PRODUCT_NAME = Mirage;
+				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MIRAGE_ASTROBOX";
 				SWIFT_OBJC_BRIDGING_HEADER = "App/Resources/Mirage-Bridging-Header.h";
 			};
@@ -429,9 +422,62 @@
 		9D8C3F682E846E92C1216F90 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -439,9 +485,55 @@
 		D4C2A33C80D68A03455FA199 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -449,7 +541,6 @@
 		F892431146CEB0352DEBF2E2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = Mirage;
 				CODE_SIGN_ENTITLEMENTS = App/Resources/Mirage.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -460,35 +551,27 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/include";
 				INFOPLIST_FILE = App/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/AstroBoxBridge/target/release";
 				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lmirage_astrobox",
-					"-framework",
-					CoreAudio,
-					"-framework",
-					Security,
-					"-framework",
-					IOKit,
-					"-framework",
-					IOBluetooth,
-					"-framework",
-					CoreBluetooth,
-					"-framework",
-					WebKit,
-					"-framework",
-					ApplicationServices,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Carbon,
-					"-framework",
-					CoreVideo,
-					"-framework",
-					CoreFoundation,
-					"-framework",
-					AppKit,
+					"-framework CoreAudio",
+					"-framework Security",
+					"-framework IOKit",
+					"-framework IOBluetooth",
+					"-framework CoreBluetooth",
+					"-framework WebKit",
+					"-framework ApplicationServices",
+					"-framework CoreGraphics",
+					"-framework Carbon",
+					"-framework CoreVideo",
+					"-framework CoreFoundation",
+					"-framework AppKit",
 					"-liconv",
 					"-lobjc",
 					"-lc",
@@ -496,6 +579,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = moe.astralsight.mirage;
 				PRODUCT_NAME = Mirage;
+				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MIRAGE_ASTROBOX";
 				SWIFT_OBJC_BRIDGING_HEADER = "App/Resources/Mirage-Bridging-Header.h";
 			};
