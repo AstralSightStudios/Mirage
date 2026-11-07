@@ -24,9 +24,14 @@ let package = Package(
             resources: [.copy("Resources/BindTemplate")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // Terminal glue for `miragectl view`
+        .target(
+            name: "CTerminal",
+            linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]
+        ),
         .executableTarget(
             name: "miragectl",
-            dependencies: ["MirageKit"],
+            dependencies: ["MirageKit", "CTerminal"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(

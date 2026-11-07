@@ -30,6 +30,8 @@ Devices
   boot DEVICE [--no-shell]           boot in the background
   shutdown DEVICE
   screenshot DEVICE FILE.png
+  view DEVICE [--blocks]             show and touch the screen in the terminal (Ctrl-q quits);
+                                     kitty graphics, else (or with --blocks) half blocks
   tap DEVICE X Y                     touch the panel (pixels)
   swipe DEVICE X0 Y0 X1 Y1 [MS]
   button DEVICE QCODE [--hold SEC]   press a hardware key (home, pgdn, ...)
@@ -309,6 +311,16 @@ func run() async throws {
         guard let png = s.screenshotPNG() else { fail("no screen") }
         try png.write(to: URL(fileURLWithPath: args.positional[1]))
         print("\(s.latestFrame.map { "\($0.width)x\($0.height)" } ?? "") -> \(args.positional[1])")
+
+    case "view":
+        let d = device()
+        let s = await session(for: d, library)
+        guard s.state.isActive else { fail("\(d.name) is not running") }
+        await waitForScreen(s)
+        guard s.latestFrame != nil else { fail("no screen") }
+        try await view(s, profile: library.profile(d.profileID), title: d.name,
+                       halfBlocks: args.flags.contains("blocks"))
+        if !s.state.isActive { print("\(d.name) shut down") }
 
     case "tap", "swipe":
         let d = device()
