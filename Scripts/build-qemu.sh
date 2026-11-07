@@ -11,10 +11,48 @@ set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 SRC=$ROOT/External/qemu-miwear
 BUILD=${QEMU_BUILD_DIR:-$SRC/build}
+FINAL_BUILD=
 
 if [ ! -f "$SRC/configure" ]; then
     echo "qemu-miwear submodule missing: git submodule update --init External/qemu-miwear" >&2
     exit 1
+fi
+
+# QEMU's configure rejects source or build paths containing whitespace or
+# colons. Mirage is often checked out below a volume or folder with a space in
+# its name, so mirror the source into a clean temporary directory and build
+# there, then copy the binary back next to the submodule.
+has_unsafe_path() {
+    case "$1" in
+        *[[:space:]:]*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+if has_unsafe_path "$SRC" || has_unsafe_path "$BUILD"; then
+    STAGE_ROOT=${MIRAGE_QEMU_STAGE_ROOT:-/tmp}
+    if has_unsafe_path "$STAGE_ROOT"; then
+        STAGE_ROOT=/tmp
+    fi
+    STAGE_ROOT=${STAGE_ROOT%/}
+    STAGE_SRC=$STAGE_ROOT/mirage-qemu-src
+    STAGE_BUILD=$STAGE_ROOT/mirage-qemu-build
+    echo "build path contains spaces or colons; staging QEMU in $STAGE_ROOT"
+    mkdir -p "$STAGE_SRC" "$STAGE_BUILD"
+    # Keep downloaded subprojects (dtc, keycodemapdb, ...) that meson fetched
+    # into the staging tree; without --delete a mirror never removes them.
+    rsync -a --exclude='.git' --exclude='/build/' --exclude='/roms/' --exclude='/subprojects/' \
+        "$SRC/" "$STAGE_SRC/"
+    if [ -d "$SRC/subprojects" ]; then
+        rsync -a --exclude='.git' "$SRC/subprojects/" "$STAGE_SRC/subprojects/"
+    fi
+    # roms is ~1.2 GB of device firmware; link it instead of copying so the
+    # staging tree stays small.
+    rm -rf "$STAGE_SRC/roms"
+    ln -sfn "$SRC/roms" "$STAGE_SRC/roms"
+    FINAL_BUILD=$BUILD
+    SRC=$STAGE_SRC
+    BUILD=$STAGE_BUILD
 fi
 
 # /usr/local may carry x86_64 Homebrew libraries that pkg-config would pick
@@ -39,4 +77,10 @@ if [ ! -f build.ninja ]; then
         "$@"
 fi
 make -j"$(sysctl -n hw.ncpu)" qemu-system-arm
-echo "built $BUILD/qemu-system-arm"
+if [ -n "$FINAL_BUILD" ]; then
+    mkdir -p "$FINAL_BUILD"
+    cp -f "$BUILD/qemu-system-arm" "$FINAL_BUILD/qemu-system-arm"
+    echo "built $FINAL_BUILD/qemu-system-arm"
+else
+    echo "built $BUILD/qemu-system-arm"
+fi

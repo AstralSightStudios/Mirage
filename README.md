@@ -22,7 +22,7 @@
 - macOS 14.0+ (推荐 macOS 15+)
 - Xcode 16+
 - Rust 1.80+ (`cargo`)
-- Homebrew 工具：`brew install xcodegen`
+- Homebrew 工具：`brew install xcodegen glib pixman meson ninja pkgconf`
 
 ### 快速开始
 1. **初始化并拉取 Git 子模块**：
@@ -30,19 +30,25 @@
    git submodule update --init --recursive
    ```
 
-2. **生成 Xcode 工程并编译**：
+2. **编译 QEMU 模拟核心**：
+   ```bash
+   make qemu
+   ```
+   `Mirage.app` 的构建阶段会把 `qemu-system-arm` 及其动态库打包进应用。
+
+3. **生成 Xcode 工程并编译**：
    ```bash
    xcodegen generate
    xcodebuild -project Mirage.xcodeproj -scheme Mirage -configuration Debug build
    ```
 
-3. **运行**：
+4. **运行**：
    直接在 Xcode 打开 `Mirage.xcodeproj` 运行，或运行构建产物：
    ```bash
    open .build-xcode/Build/Products/Debug/Mirage.app
    ```
 
-4. **CLI 工具**：
+5. **CLI 工具**：
    也可以使用随附的命令行工具 `miragectl`：
    ```bash
    swift run --package-path Packages/MirageKit miragectl --help
