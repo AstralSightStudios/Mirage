@@ -368,15 +368,23 @@ public final class DeviceSession {
         let endpoints = record.endpoints(paths)
         self.endpoints = endpoints
         watchExit(pid: record.pid)
-        var q = try? await QMPClient.connect(endpoints.qmp, timeout: 1)
-        if q == nil {
-            q = try? await QMPClient.connect(endpoints.qmpAux, timeout: 1)
+        // QEMU refuses a socket that already has its client (Mirage, another
+        // miragectl), so try each monitor once per round rather than waiting
+        // on a busy one; rounds only cover sockets a fresh boot has yet to open
+        var q: QMPClient?
+        let deadline = Date().addingTimeInterval(1)
+        while true {
+            q = try? await QMPClient.connect(endpoints.qmp, timeout: 0)
+            if q == nil { q = try? await QMPClient.connect(endpoints.qmpAux, timeout: 0) }
+            if q != nil || Date() > deadline { break }
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
         if let q {
             adoptQMP(q)
             if let s = try? await q.status(), !s.running { state = s.status == "paused" ? .paused : .running }
         }
-        await attachConsole(endpoints)
+        // A monitor answering means QEMU's other sockets are open too
+        await attachConsole(endpoints, timeout: q == nil ? 5 : 0)
         await attachScreen(endpoints)
         return true
     }
@@ -411,8 +419,8 @@ public final class DeviceSession {
         if state == .injectingShell { state = .running }
     }
 
-    private func attachConsole(_ endpoints: DeviceEndpoints) async {
-        guard let c = try? await ConsoleConnection.connect(endpoints.console, timeout: 5) else { return }
+    private func attachConsole(_ endpoints: DeviceEndpoints, timeout: TimeInterval = 5) async {
+        guard let c = try? await ConsoleConnection.connect(endpoints.console, timeout: timeout) else { return }
         console = c
         consoleConnected = true
         c.start(onData: { [weak self] data in
