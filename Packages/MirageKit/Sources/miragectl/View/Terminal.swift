@@ -159,7 +159,7 @@ final class InputQueue: @unchecked Sendable {
             while true {
                 let n = buf.withUnsafeMutableBytes { mirage_term_read($0.baseAddress, $0.count) }
                 condition.lock()
-                if n > 0 { pending += buf.prefix(n) } else { closed = true }
+                if n > 0 { pending += buf.prefix(Int(n)) } else { closed = true }
                 condition.broadcast()
                 condition.unlock()
                 if n <= 0 { return }
